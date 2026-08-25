@@ -1,0 +1,28 @@
+{
+  "name": "easing-sandbox",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint . --deny-warnings",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
+    "check": "npm run typecheck && npm run lint && npm run format:check && vite build"
+  },
+  "dependencies": {
+    "@bluehexagons/easing": "git+https://github.com/bluehexagons/easing.git#a4b580ca98d9a8eda528e1ca642fa8822b264e75"
+  },
+  "devDependencies": {
+    "oxfmt": "^0.65.0",
+    "oxlint": "^1.80.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}
