@@ -1053,9 +1053,6 @@ input[type='range']::-moz-range-thumb {
 }
 
 .workshop-section {
-  display: grid;
-  grid-template-columns: minmax(280px, 0.72fr) minmax(550px, 1.28fr);
-  gap: 80px;
   padding: 110px max(24px, calc((100vw - 1240px) / 2));
   scroll-margin-top: 30px;
   background: var(--ink);
@@ -1067,15 +1064,18 @@ input[type='range']::-moz-range-thumb {
 }
 
 .workshop-intro {
-  position: sticky;
-  top: 40px;
-  align-self: start;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  align-items: end;
+  gap: clamp(50px, 8vw, 120px);
+  margin-bottom: 58px;
 }
 
 .workshop-intro h2 {
-  margin: 0 0 24px;
-  font-size: clamp(3.2rem, 5vw, 5.6rem);
-  line-height: 0.88;
+  max-width: 760px;
+  margin: 0;
+  font-size: clamp(3.4rem, 6vw, 6.2rem);
+  line-height: 0.9;
   letter-spacing: -0.055em;
   font-weight: 500;
 }
@@ -1084,42 +1084,64 @@ input[type='range']::-moz-range-thumb {
   color: var(--lime);
 }
 
-.workshop-intro > p:not(.section-kicker) {
-  max-width: 430px;
+.workshop-guide > p {
+  max-width: 480px;
+  margin-bottom: 28px;
   color: rgba(242, 239, 231, 0.62);
   line-height: 1.65;
 }
 
-.workshop-arrow {
-  width: 210px;
-  margin: 54px 0 0 auto;
-  transform: rotate(-5deg);
-  font-family: var(--serif);
+.workshop-instruction {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 0;
+  border-top: 1px solid rgba(242, 239, 231, 0.35);
+  border-bottom: 1px solid rgba(242, 239, 231, 0.35);
+}
+
+.instruction-number,
+.workshop-instruction small {
+  font-family: var(--mono);
+}
+
+.instruction-number {
   color: var(--lime);
+  font-size: 0.6rem;
 }
 
-.workshop-arrow span {
-  margin-left: 7px;
+.workshop-instruction > span:nth-child(2) {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.workshop-arrow svg {
-  width: 100px;
-  margin-left: 10px;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
+.workshop-instruction strong {
+  font-size: 0.88rem;
+}
+
+.workshop-instruction small {
+  color: rgba(242, 239, 231, 0.5);
+  font-size: 0.56rem;
+  line-height: 1.5;
+}
+
+.instruction-arrow {
+  color: var(--lime);
+  font-size: 1.45rem;
 }
 
 .recipe-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(4, 1fr);
   border-top: 1px solid rgba(242, 239, 231, 0.35);
   border-left: 1px solid rgba(242, 239, 231, 0.35);
 }
 
 .recipe-card {
   position: relative;
-  min-height: 260px;
+  min-height: 280px;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -1177,6 +1199,35 @@ input[type='range']::-moz-range-thumb {
 .recipe-card:hover .recipe-copy > span:last-child,
 .recipe-card.selected .recipe-copy > span:last-child {
   color: rgba(23, 23, 17, 0.65);
+}
+
+.recipe-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 11px;
+  border-top: 1px solid rgba(242, 239, 231, 0.25);
+  font-family: var(--mono);
+  font-size: 0.56rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.recipe-card:hover .recipe-action,
+.recipe-card.selected .recipe-action {
+  border-color: rgba(23, 23, 17, 0.35);
+}
+
+.recipe-action > span {
+  color: var(--lime);
+  font-size: 1rem;
+}
+
+.recipe-card:hover .recipe-action > span,
+.recipe-card.selected .recipe-action > span {
+  color: var(--ink);
 }
 
 .recipe-card svg {
@@ -1585,8 +1636,8 @@ input:focus-visible {
     grid-template-columns: repeat(3, 1fr);
   }
 
-  .workshop-section {
-    gap: 45px;
+  .recipe-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -1641,17 +1692,15 @@ input:focus-visible {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .workshop-section {
-    grid-template-columns: 1fr;
-    padding-top: 80px;
-  }
-
   .workshop-intro {
-    position: static;
+    grid-template-columns: 1fr;
+    gap: 34px;
+    margin-bottom: 42px;
   }
 
-  .workshop-arrow {
-    display: none;
+  .workshop-section {
+    padding-top: 80px;
+    padding-bottom: 80px;
   }
 
   .utility-section {

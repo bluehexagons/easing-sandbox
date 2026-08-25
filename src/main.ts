@@ -78,10 +78,18 @@ app.innerHTML = `
 
     <section class="workshop-section" id="workshop" aria-labelledby="workshop-title">
       <div class="workshop-intro">
-        <p class="section-kicker light">Beyond the presets</p>
-        <h2 id="workshop-title">Build something<br /><em>with character.</em></h2>
-        <p>The library is more than a list of equations. Its constructors and combinators make new curves from a few expressive ingredients.</p>
-        <div class="workshop-arrow" aria-hidden="true"><span>try a recipe</span><svg viewBox="0 0 100 45"><path d="M2 5c20 35 58 31 88 17m-11-9 12 9-10 10" /></svg></div>
+        <div class="workshop-heading">
+          <p class="section-kicker light">Beyond the presets</p>
+          <h2 id="workshop-title">Build something <em>with character.</em></h2>
+        </div>
+        <div class="workshop-guide">
+          <p>The library's constructors and combinators turn a few expressive ingredients into reusable motion.</p>
+          <div class="workshop-instruction">
+            <span class="instruction-number">01</span>
+            <span><strong>Choose a recipe</strong><small>It loads into the active player and starts immediately.</small></span>
+            <span class="instruction-arrow" aria-hidden="true">↓</span>
+          </div>
+        </div>
       </div>
       <div class="recipe-grid" id="recipe-grid"></div>
     </section>
@@ -441,6 +449,7 @@ const renderRecipes = (): void => {
             <strong>${escapeHtml(recipe.name)}</strong>
             <span>${escapeHtml(recipe.description)}</span>
           </span>
+          <span class="recipe-action">Load + play <span aria-hidden="true">→</span></span>
           <svg viewBox="0 0 120 64" aria-hidden="true"><path d="${miniPath(recipe.build())}" /></svg>
         </button>`,
     )
