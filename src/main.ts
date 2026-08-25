@@ -59,16 +59,28 @@ app.innerHTML = `
       <div class="playground-grid">
         <article class="motion-panel">
           <div class="motion-stage" id="motion-stage">
-            <div class="stage-labels"><span>0</span><span>time</span><span>1</span></div>
-            <div class="track">
-              <div class="track-line"></div>
-              <div class="runner" id="runner"><span></span></div>
+            <div class="motion-stage-header">
+              <div>
+                <p class="section-kicker">Motion specimen</p>
+                <strong>Start → finish</strong>
+              </div>
+              <div class="position-readout">
+                <span>Position</span>
+                <output id="position-output">0%</output>
+              </div>
             </div>
-            <div class="ghost-track" aria-hidden="true">
-              <div class="ghost ghost-one"></div>
-              <div class="ghost ghost-two"></div>
-              <div class="ghost ghost-three"></div>
+            <div class="motion-lane" aria-hidden="true">
+              <div class="track">
+                <div class="track-line"></div>
+                <div class="track-progress" id="track-progress"></div>
+                <div class="runner" id="runner">
+                  <span class="runner-mark">→</span>
+                  <span>Sample</span>
+                </div>
+              </div>
+              <div class="lane-labels"><span>Start</span><span>End</span></div>
             </div>
+            <p class="motion-hint">Position follows the selected easing output.</p>
           </div>
 
           <div class="transport">
@@ -225,7 +237,8 @@ const progressInput = select<HTMLInputElement>('#progress');
 const durationInput = select<HTMLInputElement>('#duration');
 const playButton = select<HTMLButtonElement>('#play-button');
 const runner = select<HTMLElement>('#runner');
-const motionStage = select<HTMLElement>('#motion-stage');
+const trackProgress = select<HTMLElement>('#track-progress');
+const positionOutput = select<HTMLOutputElement>('#position-output');
 const graphPath = select<SVGPathElement>('#graph-path');
 const graphShadow = select<SVGPathElement>('#graph-shadow');
 const graphMarker = select<SVGCircleElement>('#graph-marker');
@@ -324,10 +337,10 @@ const updateProgress = (nextProgress: number): void => {
   progress = Math.max(0, Math.min(1, nextProgress));
   const value = finiteValue(currentCurve.fn, progress);
   const displayValue = Math.max(-0.2, Math.min(1.2, value));
-  const runnerPosition = Math.max(4, Math.min(96, 7 + displayValue * 86));
+  const runnerPosition = Math.max(0, Math.min(100, displayValue * 100));
   runner.style.left = `${runnerPosition}%`;
-  runner.style.setProperty('--runner-scale', `${1 + Math.sin(progress * Math.PI) * 0.12}`);
-  motionStage.style.setProperty('--motion-value', String(displayValue));
+  trackProgress.style.width = `${runnerPosition}%`;
+  positionOutput.value = `${Math.round(value * 100)}%`;
   progressInput.value = String(progress);
   progressInput.style.setProperty('--range-progress', `${progress * 100}%`);
   timeOutput.value = progress.toFixed(3);
