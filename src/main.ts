@@ -278,7 +278,7 @@ const updateProgress = (nextProgress: number): void => {
   progress = Math.max(0, Math.min(1, nextProgress));
   const value = finiteValue(currentCurve.fn, progress);
   const displayValue = Math.max(-0.2, Math.min(1.2, value));
-  const runnerPosition = 7 + ((displayValue + 0.2) / 1.4) * 86;
+  const runnerPosition = Math.max(4, Math.min(96, 7 + displayValue * 86));
   runner.style.left = `${runnerPosition}%`;
   runner.style.setProperty('--runner-scale', `${1 + Math.sin(progress * Math.PI) * 0.12}`);
   motionStage.style.setProperty('--motion-value', String(displayValue));
@@ -395,7 +395,7 @@ const renderUtilities = (): void => {
     .map(
       (recipe, index) => `
         <button type="button" data-utility="${index}">
-          <svg viewBox="0 0 80 42" aria-hidden="true"><path d="${miniPath(recipe.fn)}" /></svg>
+          <svg viewBox="0 0 120 64" aria-hidden="true"><path d="${miniPath(recipe.fn)}" /></svg>
           <span><strong>${escapeHtml(recipe.name)}</strong><code>${escapeHtml(recipe.code)}</code></span>
           <span class="utility-plus">+</span>
         </button>`,
