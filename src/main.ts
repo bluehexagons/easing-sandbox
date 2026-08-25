@@ -84,7 +84,7 @@ app.innerHTML = `
           </div>
         </article>
 
-        <article class="graph-panel">
+        <article class="graph-panel" tabindex="-1" aria-labelledby="selected-name">
           <div class="graph-heading">
             <div>
               <p class="section-kicker">Selected curve</p>
@@ -132,7 +132,7 @@ app.innerHTML = `
         <div>
           <p class="section-kicker">The collection</p>
           <h2 id="curves-title">Find your rhythm</h2>
-          <p>Every parameter-free curve in the package, ready to audition.</p>
+          <p>Every parameter-free curve in the package, ready to audition. Your preview follows as you browse.</p>
         </div>
         <label class="search-box">
           <span class="sr-only">Search curves</span>
@@ -168,6 +168,37 @@ app.innerHTML = `
       <div class="utility-list" id="utility-list"></div>
     </section>
   </main>
+
+  <aside class="curve-companion" id="curve-companion" aria-label="Selected curve quick preview">
+    <button class="companion-close" id="companion-close" type="button" aria-label="Dismiss quick preview">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3 3 10 10M13 3 3 13" /></svg>
+    </button>
+    <div class="companion-copy">
+      <span class="companion-kicker">Now playing</span>
+      <strong id="companion-name" aria-live="polite">Cubic In Out</strong>
+      <span class="companion-values">
+        <span>t</span><output id="companion-time">0.000</output>
+        <span>y</span><output id="companion-value">0.000</output>
+      </span>
+    </div>
+    <svg class="companion-graph" viewBox="0 0 120 64" aria-hidden="true">
+      <path class="companion-grid" d="M8 56H112M8 56V8" />
+      <path class="companion-reference" d="M8 56L112 8" />
+      <path class="companion-path" id="companion-path" />
+      <circle class="companion-marker-ring" id="companion-marker-ring" r="4.5" />
+      <circle class="companion-marker" id="companion-marker" r="2.5" />
+    </svg>
+    <div class="companion-actions">
+      <button class="companion-play" id="companion-play" type="button" aria-label="Play animation">
+        <svg class="play-icon" viewBox="0 0 18 18" aria-hidden="true"><path d="m5 3 9 6-9 6z" /></svg>
+        <svg class="pause-icon" viewBox="0 0 18 18" aria-hidden="true"><path d="M5 3h3v12H5zm5 0h3v12h-3z" /></svg>
+      </button>
+      <button class="companion-details" id="companion-details" type="button">
+        Full view
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 11 13 3M6 3h7v7" /></svg>
+      </button>
+    </div>
+  </aside>
 
   <footer>
     <div class="footer-mark" aria-hidden="true">
@@ -206,6 +237,19 @@ const recipeGrid = select<HTMLElement>('#recipe-grid');
 const utilityList = select<HTMLElement>('#utility-list');
 const emptyState = select<HTMLElement>('#empty-state');
 const searchInput = select<HTMLInputElement>('#curve-search');
+const playground = select<HTMLElement>('.playground');
+const graphPanel = select<HTMLElement>('.graph-panel');
+const pageFooter = select<HTMLElement>('footer');
+const companion = select<HTMLElement>('#curve-companion');
+const companionName = select<HTMLElement>('#companion-name');
+const companionTime = select<HTMLOutputElement>('#companion-time');
+const companionValue = select<HTMLOutputElement>('#companion-value');
+const companionPath = select<SVGPathElement>('#companion-path');
+const companionMarker = select<SVGCircleElement>('#companion-marker');
+const companionMarkerRing = select<SVGCircleElement>('#companion-marker-ring');
+const companionPlayButton = select<HTMLButtonElement>('#companion-play');
+const companionDetailsButton = select<HTMLButtonElement>('#companion-details');
+const companionCloseButton = select<HTMLButtonElement>('#companion-close');
 
 const initialCurve = namedCurves.find((curve) => curve.id === 'cubicInOut') ?? namedCurves[0];
 if (!initialCurve) throw new Error('No easing curves were loaded');
@@ -216,6 +260,8 @@ let duration = Number(durationInput.value);
 let animationFrame: number | undefined;
 let animationStarted = 0;
 let graphRange = { min: 0, max: 1 };
+let companionDismissed = false;
+let companionUpdateFrame: number | undefined;
 
 const escapeHtml = (value: string): string =>
   value.replace(
@@ -286,6 +332,15 @@ const updateProgress = (nextProgress: number): void => {
   progressInput.style.setProperty('--range-progress', `${progress * 100}%`);
   timeOutput.value = progress.toFixed(3);
   valueOutput.textContent = value.toFixed(3);
+  companionTime.value = progress.toFixed(3);
+  companionValue.value = value.toFixed(3);
+
+  const companionX = 8 + progress * 104;
+  const companionY = 56 - displayValue * 48;
+  for (const marker of [companionMarker, companionMarkerRing]) {
+    marker.setAttribute('cx', companionX.toFixed(2));
+    marker.setAttribute('cy', companionY.toFixed(2));
+  }
 
   const markerX = 44 + progress * 480;
   const markerY = 254 - ((value - graphRange.min) / (graphRange.max - graphRange.min)) * 220;
@@ -302,8 +357,10 @@ const updateProgress = (nextProgress: number): void => {
 const stopAnimation = (): void => {
   if (animationFrame !== undefined) cancelAnimationFrame(animationFrame);
   animationFrame = undefined;
-  playButton.classList.remove('playing');
-  playButton.setAttribute('aria-label', 'Play animation');
+  for (const button of [playButton, companionPlayButton]) {
+    button.classList.remove('playing');
+    button.setAttribute('aria-label', 'Play animation');
+  }
 };
 
 const tick = (timestamp: number): void => {
@@ -320,9 +377,27 @@ const play = (): void => {
   stopAnimation();
   updateProgress(0);
   animationStarted = performance.now();
-  playButton.classList.add('playing');
-  playButton.setAttribute('aria-label', 'Pause animation');
+  for (const button of [playButton, companionPlayButton]) {
+    button.classList.add('playing');
+    button.setAttribute('aria-label', 'Pause animation');
+  }
   animationFrame = requestAnimationFrame(tick);
+};
+
+const updateCompanionVisibility = (): void => {
+  const playgroundBounds = playground.getBoundingClientRect();
+  const footerBounds = pageFooter.getBoundingClientRect();
+  const isPastPlayground = playgroundBounds.bottom < 24;
+  const isAtFooter = footerBounds.top < window.innerHeight;
+  companion.classList.toggle('visible', isPastPlayground && !isAtFooter && !companionDismissed);
+};
+
+const queueCompanionVisibilityUpdate = (): void => {
+  if (companionUpdateFrame !== undefined) return;
+  companionUpdateFrame = window.requestAnimationFrame(() => {
+    companionUpdateFrame = undefined;
+    updateCompanionVisibility();
+  });
 };
 
 const updateCurveCards = (): void => {
@@ -338,15 +413,21 @@ const updateCurveCards = (): void => {
   });
 };
 
-const selectCurve = (curve: CurveDefinition, shouldPlay = true): void => {
+const selectCurve = (curve: CurveDefinition, shouldPlay = true, revealCompanion = false): void => {
   currentCurve = curve;
   selectedName.textContent = curve.name;
+  companionName.textContent = curve.name;
+  companionPath.setAttribute('d', miniPath(curve.fn));
   curveDescription.textContent = curve.description;
   codeOutput.textContent = curve.code;
   drawGraph();
   updateProgress(0);
   updateCurveCards();
   if (shouldPlay) play();
+  if (revealCompanion) {
+    companionDismissed = false;
+    updateCompanionVisibility();
+  }
 };
 
 const renderCurves = (): void => {
@@ -408,6 +489,23 @@ playButton.addEventListener('click', () => {
   else play();
 });
 
+companionPlayButton.addEventListener('click', () => {
+  if (animationFrame !== undefined) stopAnimation();
+  else play();
+});
+
+companionDetailsButton.addEventListener('click', () => {
+  companionDismissed = true;
+  updateCompanionVisibility();
+  graphPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  graphPanel.focus({ preventScroll: true });
+});
+
+companionCloseButton.addEventListener('click', () => {
+  companionDismissed = true;
+  updateCompanionVisibility();
+});
+
 progressInput.addEventListener('input', () => {
   stopAnimation();
   updateProgress(Number(progressInput.value));
@@ -426,7 +524,7 @@ curveGrid.addEventListener('click', (event) => {
   const card = (event.target as Element).closest<HTMLButtonElement>('[data-curve]');
   if (!card) return;
   const curve = namedCurves.find(({ id }) => id === card.dataset['curve']);
-  if (curve) selectCurve(curve);
+  if (curve) selectCurve(curve, true, true);
 });
 
 recipeGrid.addEventListener('click', (event) => {
@@ -434,8 +532,7 @@ recipeGrid.addEventListener('click', (event) => {
   if (!card) return;
   const recipe = workshopRecipes.find(({ id }) => id === card.dataset['recipe']);
   if (!recipe) return;
-  selectCurve(customCurve(recipe));
-  document.querySelector('.playground')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  selectCurve(customCurve(recipe), true, true);
 });
 
 utilityList.addEventListener('click', (event) => {
@@ -444,17 +541,20 @@ utilityList.addEventListener('click', (event) => {
   const index = Number(button.dataset['utility']);
   const utility = utilityRecipes[index];
   if (!utility) return;
-  selectCurve({
-    id: `utility-${index}`,
-    name: utility.name,
-    shortName: utility.name,
-    group: 'classic',
-    description: `A focused example of the ${utility.name.toLowerCase()} utility.`,
-    fn: utility.fn,
-    code: `import { /* curves and utilities */ } from '@bluehexagons/easing';\n\nconst curve = ${utility.code};`,
-    custom: true,
-  });
-  document.querySelector('.playground')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  selectCurve(
+    {
+      id: `utility-${index}`,
+      name: utility.name,
+      shortName: utility.name,
+      group: 'classic',
+      description: `A focused example of the ${utility.name.toLowerCase()} utility.`,
+      fn: utility.fn,
+      code: `import { /* curves and utilities */ } from '@bluehexagons/easing';\n\nconst curve = ${utility.code};`,
+      custom: true,
+    },
+    true,
+    true,
+  );
 });
 
 document.querySelector('.filters')?.addEventListener('click', (event) => {
@@ -495,12 +595,16 @@ window.addEventListener('keydown', (event) => {
   else stopAnimation();
 });
 
+window.addEventListener('scroll', queueCompanionVisibilityUpdate, { passive: true });
+window.addEventListener('resize', queueCompanionVisibilityUpdate);
+
 drawGrid();
 renderCurves();
 renderRecipes();
 renderUtilities();
 durationInput.dispatchEvent(new Event('input'));
 selectCurve(currentCurve, false);
+updateCompanionVisibility();
 
 if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
   window.setTimeout(play, 500);
