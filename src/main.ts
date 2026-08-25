@@ -187,7 +187,7 @@ const select = <T extends Element>(selector: string): T => {
 const selectedName = select<HTMLElement>('#selected-name');
 const curveDescription = select<HTMLElement>('#curve-description');
 const codeOutput = select<HTMLElement>('#code-output');
-const valueOutput = select<HTMLOutputElement>('#value-output');
+const valueOutput = select<HTMLElement>('#value-output');
 const timeOutput = select<HTMLOutputElement>('#time-output');
 const durationOutput = select<HTMLOutputElement>('#duration-output');
 const progressInput = select<HTMLInputElement>('#progress');
@@ -285,7 +285,7 @@ const updateProgress = (nextProgress: number): void => {
   progressInput.value = String(progress);
   progressInput.style.setProperty('--range-progress', `${progress * 100}%`);
   timeOutput.value = progress.toFixed(3);
-  valueOutput.value = value.toFixed(3);
+  valueOutput.textContent = value.toFixed(3);
 
   const markerX = 44 + progress * 480;
   const markerY = 254 - ((value - graphRange.min) / (graphRange.max - graphRange.min)) * 220;
