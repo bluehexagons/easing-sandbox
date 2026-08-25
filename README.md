@@ -1,6 +1,10 @@
 # Easing Lab
 
+[![Test and deploy Pages](https://github.com/bluehexagons/easing-sandbox/actions/workflows/pages.yml/badge.svg)](https://github.com/bluehexagons/easing-sandbox/actions/workflows/pages.yml)
+
 An interactive TypeScript playground for [`@bluehexagons/easing`](https://github.com/bluehexagons/easing). It makes the package's full curve registry, configurable constructors, and composition utilities easy to see and feel in a browser.
+
+**[Try Easing Lab on GitHub Pages](https://bluehexagons.github.io/easing-sandbox/)**
 
 ## What it showcases
 
@@ -20,6 +24,16 @@ npm install
 npm run dev
 ```
 
+To make the development server reachable from other devices on your local
+network, use:
+
+```sh
+npm run host
+```
+
+This changes Vite's bind address; the VM firewall or an infrastructure gateway
+must still permit access to the printed port.
+
 Run all local checks and create the production bundle with:
 
 ```sh
@@ -30,6 +44,10 @@ The easing package's latest APIs are newer than its npm release, so this project
 
 ## Deployment
 
-[`.github/workflows/pages.yml`](.github/workflows/pages.yml) checks every pull request and push to `main`. On `main`, it uploads the Vite production build and, when the repository is public, deploys it through GitHub Pages using current actions pinned by commit SHA.
+[`.github/workflows/pages.yml`](.github/workflows/pages.yml) checks every pull request and push to `main`. On `main`, it uploads the Vite production build and deploys it through GitHub Pages using actions pinned by commit SHA.
 
-Once the repository is public, select **GitHub Actions** as the Pages source under **Settings → Pages**. Vite uses relative asset paths, so the build works at the repository path (`/easing-sandbox/`) without environment-specific configuration.
+The public deployment is available at
+[bluehexagons.github.io/easing-sandbox](https://bluehexagons.github.io/easing-sandbox/).
+GitHub Pages is configured to use **GitHub Actions** as its source. Vite uses
+relative asset paths, so the production bundle works at the repository path
+(`/easing-sandbox/`) without environment-specific configuration.
