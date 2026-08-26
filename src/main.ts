@@ -80,16 +80,48 @@ app.innerHTML = `
           <label class="duration-control" for="duration">
             <span class="duration-copy"><span>Playback duration</span><output id="duration-output" for="duration">1.8 s</output></span>
             <input id="duration" type="range" min="300" max="30000" value="1800" step="100" />
-            <span class="duration-bounds" aria-hidden="true"><span>300 ms</span><span>30 s</span></span>
-          </label>
-          <label class="loop-control" for="loop-playback">
-            <input id="loop-playback" type="checkbox" checked />
-            <span><strong>Loop</strong><small>Keep comparisons moving</small></span>
+            <span class="duration-bounds" aria-hidden="true"><span>300 ms</span><span id="duration-context">Per direction</span><span>30 s</span></span>
           </label>
           <div class="sync-control">
             <span><output id="playing-count">0</output> playing in sync</span>
             <button id="stop-all" type="button" disabled>Stop all</button>
           </div>
+          <fieldset class="repeat-control">
+            <legend>Repeat style</legend>
+            <div role="group" aria-label="Repeat style">
+              <button type="button" data-repeat-style="loop" aria-pressed="false"><strong>Loop</strong><small>Restart at 0</small></button>
+              <button type="button" data-repeat-style="rewind" aria-pressed="false"><strong>Rewind</strong><small>Retrace the curve</small></button>
+              <button class="active" type="button" data-repeat-style="alternate" aria-pressed="true"><strong>Alternate</strong><small>Ease both ways</small></button>
+              <button type="button" data-repeat-style="once" aria-pressed="false"><strong>Once</strong><small>One pass only</small></button>
+              <button type="button" data-repeat-style="custom" aria-pressed="false"><strong>Custom</strong><small>Compose time</small></button>
+            </div>
+            <p id="repeat-description" aria-live="polite">Runs 0→1 in each direction, applying the same easing on both passes.</p>
+          </fieldset>
+          <section class="custom-timeline" id="custom-timeline" aria-labelledby="custom-timeline-title" hidden>
+            <div>
+              <span class="custom-timeline-kicker">Timeline recipes</span>
+              <strong id="custom-timeline-title">Choose what controls time</strong>
+            </div>
+            <div class="timeline-presets" role="group" aria-label="Custom timeline recipe">
+              <button type="button" data-timeline-preset="active" aria-pressed="false">
+                <svg viewBox="0 0 80 32" aria-hidden="true"><path d="M3 28C22 28 20 5 42 9s18-5 35-5" /></svg>
+                <span><strong>Active curve</strong><small id="active-timeline-name">Capture selected</small></span>
+              </button>
+              <button class="active" type="button" data-timeline-preset="wobble" aria-pressed="true">
+                <svg viewBox="0 0 80 32" aria-hidden="true"><path d="M3 28C10 28 12 4 40 4s30 24 37 24" /></svg>
+                <span><strong>Sine wobble</strong><small>Smooth pendulum</small></span>
+              </button>
+              <button type="button" data-timeline-preset="steps" aria-pressed="false">
+                <svg viewBox="0 0 80 32" aria-hidden="true"><path d="M3 28h10v-6h10v-6h10v-6h14v6h10v6h10v6h10" /></svg>
+                <span><strong>Rigid steps</strong><small>Five hard states</small></span>
+              </button>
+              <button type="button" data-timeline-preset="bounce" aria-pressed="false">
+                <svg viewBox="0 0 80 32" aria-hidden="true"><path d="M3 28c8 0 4-24 25-24 8 0 5 9 12 9s4-9 12-9c21 0 17 24 25 24" /></svg>
+                <span><strong>Bounce back</strong><small>Land at both ends</small></span>
+              </button>
+            </div>
+            <code id="timeline-code">compose(sineInOut, triangle)</code>
+          </section>
         </div>
       </div>
       <div class="curve-grid" id="curve-grid"></div>

@@ -7,6 +7,30 @@ import {
   type CurveDefinition,
   type CurveGroup,
 } from './curves';
+import {
+  repeatPeriod,
+  timelineFrame,
+  timelinePresets,
+  type RepeatStyle,
+  type TimelineFrame,
+  type TimelinePreset,
+} from './timeline';
+
+const repeatDescriptions: Record<RepeatStyle, string> = {
+  loop: 'Runs from 0→1, then immediately starts again at 0.',
+  rewind: 'Runs 0→1, then retraces the easing curve from 1→0.',
+  alternate: 'Runs 0→1 in each direction, applying the same easing on both passes.',
+  once: 'Runs from 0→1 once, then stops at the final value.',
+  custom: 'Uses a curve or composition to control time across each repeating cycle.',
+};
+
+const durationContexts: Record<RepeatStyle, string> = {
+  loop: 'Per pass',
+  rewind: 'Per direction',
+  alternate: 'Per direction',
+  once: 'One pass',
+  custom: 'Full cycle',
+};
 
 const select = <T extends Element>(selector: string): T => {
   const element = document.querySelector<T>(selector);
@@ -72,8 +96,12 @@ export const initializePlayground = (): void => {
   const durationOutput = select<HTMLOutputElement>('#duration-output');
   const progressInput = select<HTMLInputElement>('#progress');
   const durationInput = select<HTMLInputElement>('#duration');
-  const loopInput = select<HTMLInputElement>('#loop-playback');
+  const durationContext = select<HTMLElement>('#duration-context');
   const autoplayInput = select<HTMLInputElement>('#autoplay-visible');
+  const repeatDescription = select<HTMLElement>('#repeat-description');
+  const customTimeline = select<HTMLElement>('#custom-timeline');
+  const timelineCode = select<HTMLElement>('#timeline-code');
+  const activeTimelineName = select<HTMLElement>('#active-timeline-name');
   const playingCount = select<HTMLOutputElement>('#playing-count');
   const stopAllButton = select<HTMLButtonElement>('#stop-all');
   const graphPath = select<SVGPathElement>('#graph-path');
@@ -121,8 +149,13 @@ export const initializePlayground = (): void => {
   let currentCurve: CurveDefinition = initialCurve;
   let activeFilter: CurveGroup = 'all';
   let progress = 0;
+  let clockPosition = 0;
   let duration = Number(durationInput.value);
-  let loopPlayback = loopInput.checked;
+  let repeatStyle: RepeatStyle = 'alternate';
+  let activeTimelinePreset: TimelinePreset =
+    timelinePresets.find((preset) => preset.id === 'wobble') ?? timelinePresets[0]!;
+  let visualMirrored = false;
+  let visualBackwards = false;
   let autoplayVisible = autoplayInput.checked;
   let animationFrame: number | undefined;
   let animationStarted = 0;
@@ -134,6 +167,8 @@ export const initializePlayground = (): void => {
   const autoVisibleIds = new Set<string>();
   const autoPausedIds = new Set<string>();
   const playerProgress = new Map<string, number>([[initialCurve.id, 0]]);
+  const playerMirrored = new Map<string, boolean>([[initialCurve.id, false]]);
+  const playerBackwards = new Map<string, boolean>([[initialCurve.id, false]]);
   let autoplayObserver: IntersectionObserver | undefined;
 
   document.documentElement.dataset['previewMode'] = 'move';
@@ -169,19 +204,30 @@ export const initializePlayground = (): void => {
     graphShadow.setAttribute('d', path);
   };
 
-  const updatePreview = (curve: CurveDefinition, time: number): void => {
+  const updatePreview = (
+    curve: CurveDefinition,
+    time: number,
+    mirrored = false,
+    backwards = false,
+  ): void => {
     const value = finiteValue(curve.fn, time);
-    const displayValue = Math.max(-0.2, Math.min(1.2, value));
-    const position = Math.max(0, Math.min(1, value));
+    const visualValue = mirrored ? 1 - value : value;
+    const graphValue = Math.max(-0.2, Math.min(1.2, value));
+    const position = Math.max(0, Math.min(1, visualValue));
     const x = 8 + time * 104;
-    const y = 56 - displayValue * 48;
+    const y = 56 - graphValue * 48;
     document.querySelectorAll<HTMLElement>(`[data-preview-id="${curve.id}"]`).forEach((preview) => {
+      preview.dataset['direction'] = backwards ? 'reverse' : 'forward';
       preview.style.setProperty('--preview-position', `${position * 100}%`);
       preview.style.setProperty(
         '--preview-scale',
-        String(Math.max(0.25, Math.min(1.5, 0.4 + value))),
+        String(Math.max(0.25, Math.min(1.5, 0.4 + visualValue))),
       );
-      preview.style.setProperty('--preview-rotation', `${value * 300}deg`);
+      preview.style.setProperty('--preview-rotation', `${visualValue * 300}deg`);
+      const mover = preview.querySelector<HTMLElement>('.preview-mover');
+      if (mover) mover.textContent = backwards ? '←' : '→';
+      const rotateObject = preview.querySelector<HTMLElement>('.preview-rotate-object');
+      if (rotateObject) rotateObject.textContent = backwards ? '↙' : '↗';
       const guide = preview.querySelector<SVGLineElement>('[data-preview-guide]');
       guide?.setAttribute('x1', x.toFixed(2));
       guide?.setAttribute('x2', x.toFixed(2));
@@ -221,7 +267,12 @@ export const initializePlayground = (): void => {
     graphGuide.setAttribute('x2', markerX.toFixed(2));
     graphGuide.setAttribute('y1', markerY.toFixed(2));
     graphGuide.setAttribute('y2', '254');
-    updatePreview(currentCurve, activeProgress);
+    updatePreview(
+      currentCurve,
+      activeProgress,
+      playerMirrored.get(currentCurve.id) ?? visualMirrored,
+      playerBackwards.get(currentCurve.id) ?? visualBackwards,
+    );
   };
 
   const refreshVisiblePreviews = (): void => {
@@ -232,7 +283,14 @@ export const initializePlayground = (): void => {
     );
     for (const id of visibleIds) {
       const curve = playerDefinitions.get(id);
-      if (curve) updatePreview(curve, playerProgress.get(curve.id) ?? 0);
+      if (curve) {
+        updatePreview(
+          curve,
+          playerProgress.get(curve.id) ?? 0,
+          playerMirrored.get(curve.id) ?? false,
+          playerBackwards.get(curve.id) ?? false,
+        );
+      }
     }
   };
 
@@ -303,9 +361,37 @@ export const initializePlayground = (): void => {
   const renderPlayingFrame = (): void => {
     for (const id of playingIds) {
       const curve = playerDefinitions.get(id);
-      if (curve) updatePreview(curve, playerProgress.get(id) ?? progress);
+      if (curve) {
+        updatePreview(
+          curve,
+          playerProgress.get(id) ?? progress,
+          playerMirrored.get(id) ?? visualMirrored,
+          playerBackwards.get(id) ?? visualBackwards,
+        );
+      }
     }
     updateActiveCompanion();
+  };
+
+  const applyTimelineFrame = (frame: TimelineFrame): void => {
+    progress = frame.time;
+    visualMirrored = frame.mirrored;
+    visualBackwards = frame.backwards;
+    document.documentElement.dataset['timelineTime'] = progress.toFixed(4);
+    document.documentElement.dataset['timelineDirection'] = visualBackwards ? 'reverse' : 'forward';
+    for (const id of playingIds) {
+      playerProgress.set(id, progress);
+      playerMirrored.set(id, visualMirrored);
+      playerBackwards.set(id, visualBackwards);
+    }
+  };
+
+  const finishPlayers = (): void => {
+    manuallyPlayingIds.clear();
+    for (const id of autoVisibleIds) autoPausedIds.add(id);
+    playingIds.clear();
+    animationFrame = undefined;
+    updatePlaybackControls();
   };
 
   const tick = (timestamp: number): void => {
@@ -313,22 +399,19 @@ export const initializePlayground = (): void => {
       animationFrame = undefined;
       return;
     }
-    let elapsed = timestamp - animationStarted;
-    if (loopPlayback && elapsed >= duration) {
-      const completedCycles = Math.floor(elapsed / duration);
-      animationStarted += completedCycles * duration;
-      elapsed -= completedCycles * duration;
+    clockPosition = (timestamp - animationStarted) / duration;
+    const period = repeatPeriod(repeatStyle);
+    if (repeatStyle !== 'once' && clockPosition >= period) {
+      const completedCycles = Math.floor(clockPosition / period);
+      animationStarted += completedCycles * period * duration;
+      clockPosition -= completedCycles * period;
     }
-    progress = Math.min(1, elapsed / duration);
-    for (const id of playingIds) playerProgress.set(id, progress);
+    const frame = timelineFrame(clockPosition, repeatStyle, activeTimelinePreset);
+    applyTimelineFrame(frame);
     renderPlayingFrame();
 
-    if (!loopPlayback && elapsed >= duration) {
-      manuallyPlayingIds.clear();
-      for (const id of autoVisibleIds) autoPausedIds.add(id);
-      playingIds.clear();
-      animationFrame = undefined;
-      updatePlaybackControls();
+    if (frame.complete) {
+      finishPlayers();
       return;
     }
     animationFrame = requestAnimationFrame(tick);
@@ -336,7 +419,7 @@ export const initializePlayground = (): void => {
 
   const ensureClock = (): void => {
     if (animationFrame !== undefined || playingIds.size === 0) return;
-    animationStarted = performance.now() - progress * duration;
+    animationStarted = performance.now() - clockPosition * duration;
     animationFrame = requestAnimationFrame(tick);
   };
 
@@ -349,12 +432,17 @@ export const initializePlayground = (): void => {
     }
 
     const clockWasStopped = playingIds.size === 0;
+    const previouslyPlayingIds = new Set(playingIds);
     for (const id of playingIds) {
       if (!desiredIds.has(id)) playingIds.delete(id);
     }
     for (const id of desiredIds) {
       if (!playerDefinitions.has(id)) continue;
-      if (!playerProgress.has(id)) playerProgress.set(id, progress);
+      if (!previouslyPlayingIds.has(id)) {
+        playerProgress.set(id, progress);
+        playerMirrored.set(id, visualMirrored);
+        playerBackwards.set(id, visualBackwards);
+      }
       playingIds.add(id);
     }
 
@@ -363,9 +451,16 @@ export const initializePlayground = (): void => {
       animationFrame = undefined;
     } else {
       if (clockWasStopped) {
-        if (progress >= 1) progress = 0;
-        for (const id of playingIds) playerProgress.set(id, progress);
-        animationStarted = performance.now() - progress * duration;
+        if (repeatStyle === 'once' && clockPosition >= 1) {
+          clockPosition = 0;
+          applyTimelineFrame(timelineFrame(0, repeatStyle, activeTimelinePreset));
+        }
+        for (const id of playingIds) {
+          playerProgress.set(id, progress);
+          playerMirrored.set(id, visualMirrored);
+          playerBackwards.set(id, visualBackwards);
+        }
+        animationStarted = performance.now() - clockPosition * duration;
       }
       ensureClock();
     }
@@ -408,7 +503,12 @@ export const initializePlayground = (): void => {
       manuallyPlayingIds.add(curve.id);
     }
     reconcilePlayingIds();
-    updatePreview(curve, playerProgress.get(curve.id) ?? 0);
+    updatePreview(
+      curve,
+      playerProgress.get(curve.id) ?? 0,
+      playerMirrored.get(curve.id) ?? false,
+      playerBackwards.get(curve.id) ?? false,
+    );
     updateActiveCompanion();
   };
 
@@ -511,10 +611,22 @@ export const initializePlayground = (): void => {
   });
 
   progressInput.addEventListener('input', () => {
-    progress = Number(progressInput.value);
+    clockPosition = Number(progressInput.value);
+    const frame = timelineFrame(clockPosition, repeatStyle, activeTimelinePreset);
+    progress = frame.time;
+    visualMirrored = frame.mirrored;
+    visualBackwards = frame.backwards;
     playerProgress.set(currentCurve.id, progress);
-    for (const id of playingIds) playerProgress.set(id, progress);
-    if (playingIds.size > 0) animationStarted = performance.now() - progress * duration;
+    playerMirrored.set(currentCurve.id, visualMirrored);
+    playerBackwards.set(currentCurve.id, visualBackwards);
+    for (const id of playingIds) {
+      playerProgress.set(id, progress);
+      playerMirrored.set(id, visualMirrored);
+      playerBackwards.set(id, visualBackwards);
+    }
+    if (playingIds.size > 0) {
+      animationStarted = performance.now() - clockPosition * duration;
+    }
     renderPlayingFrame();
   });
 
@@ -529,12 +641,64 @@ export const initializePlayground = (): void => {
       '--range-progress',
       `${((duration - 300) / (30000 - 300)) * 100}%`,
     );
-    if (playingIds.size > 0) animationStarted = performance.now() - progress * duration;
+    if (playingIds.size > 0) {
+      animationStarted = performance.now() - clockPosition * duration;
+    }
   });
 
-  loopInput.addEventListener('change', () => {
-    loopPlayback = loopInput.checked;
-    if (playingIds.size > 0) animationStarted = performance.now() - progress * duration;
+  document.querySelector('.repeat-control')?.addEventListener('click', (event) => {
+    const button = (event.target as Element).closest<HTMLButtonElement>('[data-repeat-style]');
+    if (!button) return;
+    repeatStyle = (button.dataset['repeatStyle'] ?? 'alternate') as RepeatStyle;
+    document.querySelectorAll<HTMLButtonElement>('[data-repeat-style]').forEach((styleButton) => {
+      const active = styleButton === button;
+      styleButton.classList.toggle('active', active);
+      styleButton.setAttribute('aria-pressed', String(active));
+    });
+    repeatDescription.textContent = repeatDescriptions[repeatStyle];
+    durationContext.textContent = durationContexts[repeatStyle];
+    customTimeline.hidden = repeatStyle !== 'custom';
+    clockPosition = 0;
+    applyTimelineFrame(timelineFrame(0, repeatStyle, activeTimelinePreset));
+    playerProgress.set(currentCurve.id, progress);
+    playerMirrored.set(currentCurve.id, visualMirrored);
+    playerBackwards.set(currentCurve.id, visualBackwards);
+    if (playingIds.size > 0) animationStarted = performance.now();
+    renderPlayingFrame();
+  });
+
+  customTimeline.addEventListener('click', (event) => {
+    const button = (event.target as Element).closest<HTMLButtonElement>('[data-timeline-preset]');
+    if (!button) return;
+    const preset = timelinePresets.find(
+      (candidate) => candidate.id === button.dataset['timelinePreset'],
+    );
+    if (!preset) return;
+    activeTimelinePreset =
+      preset.id === 'active'
+        ? {
+            ...preset,
+            name: currentCurve.name,
+            fn: currentCurve.fn,
+            code: `activeCurve /* ${currentCurve.name} */`,
+          }
+        : preset;
+    if (preset.id === 'active') activeTimelineName.textContent = currentCurve.name;
+    document
+      .querySelectorAll<HTMLButtonElement>('[data-timeline-preset]')
+      .forEach((presetButton) => {
+        const active = presetButton === button;
+        presetButton.classList.toggle('active', active);
+        presetButton.setAttribute('aria-pressed', String(active));
+      });
+    timelineCode.textContent = activeTimelinePreset.code;
+    clockPosition = 0;
+    applyTimelineFrame(timelineFrame(0, repeatStyle, activeTimelinePreset));
+    playerProgress.set(currentCurve.id, progress);
+    playerMirrored.set(currentCurve.id, visualMirrored);
+    playerBackwards.set(currentCurve.id, visualBackwards);
+    if (playingIds.size > 0) animationStarted = performance.now();
+    renderPlayingFrame();
   });
 
   autoplayInput.addEventListener('change', () => {
@@ -681,5 +845,6 @@ export const initializePlayground = (): void => {
   renderRecipes();
   renderUtilities();
   durationInput.dispatchEvent(new Event('input'));
+  applyTimelineFrame(timelineFrame(0, repeatStyle, activeTimelinePreset));
   selectCurve(currentCurve);
 };

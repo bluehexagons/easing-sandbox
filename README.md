@@ -9,7 +9,9 @@ An interactive TypeScript playground for [`@bluehexagons/easing`](https://github
 ## What it showcases
 
 - All 33 parameter-free curves from `@bluehexagons/easing/named`
-- Synchronized multi-curve playback, optional looping, and opt-in viewport autoplay that follows previews as you scroll
+- Synchronized multi-curve playback and opt-in viewport autoplay that follows previews as you scroll
+- Loop, rewind, same-easing alternate, once, and custom timeline repeat styles
+- Custom timeline recipes for an active curve or composition, sine wobble, rigid steps, and bouncing return motion
 - A shared duration range from 300 milliseconds to 30 seconds
 - Switchable curve, movement, scale, and rotation visualizations across presets, recipes, and composition tools
 - A persistent active-curve player with mobile preview plus compact and expanded modes
