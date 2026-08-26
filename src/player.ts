@@ -73,6 +73,7 @@ export const initializePlayground = (): void => {
   const progressInput = select<HTMLInputElement>('#progress');
   const durationInput = select<HTMLInputElement>('#duration');
   const loopInput = select<HTMLInputElement>('#loop-playback');
+  const autoplayInput = select<HTMLInputElement>('#autoplay-visible');
   const playingCount = select<HTMLOutputElement>('#playing-count');
   const stopAllButton = select<HTMLButtonElement>('#stop-all');
   const graphPath = select<SVGPathElement>('#graph-path');
@@ -122,13 +123,18 @@ export const initializePlayground = (): void => {
   let progress = 0;
   let duration = Number(durationInput.value);
   let loopPlayback = loopInput.checked;
+  let autoplayVisible = autoplayInput.checked;
   let animationFrame: number | undefined;
   let animationStarted = 0;
   let graphRange = { min: 0, max: 1 };
   let companionExpanded = false;
   let customCurveIndex = 0;
   const playingIds = new Set<string>();
+  const manuallyPlayingIds = new Set<string>();
+  const autoVisibleIds = new Set<string>();
+  const autoPausedIds = new Set<string>();
   const playerProgress = new Map<string, number>([[initialCurve.id, 0]]);
+  let autoplayObserver: IntersectionObserver | undefined;
 
   document.documentElement.dataset['previewMode'] = 'move';
 
@@ -279,6 +285,7 @@ export const initializePlayground = (): void => {
     );
     if (currentCurve.id !== curve.id && currentCurve.custom && !previousHasControl) {
       playingIds.delete(currentCurve.id);
+      manuallyPlayingIds.delete(currentCurve.id);
     }
     playerDefinitions.set(curve.id, curve);
     if (!playerProgress.has(curve.id)) playerProgress.set(curve.id, 0);
@@ -317,6 +324,8 @@ export const initializePlayground = (): void => {
     renderPlayingFrame();
 
     if (!loopPlayback && elapsed >= duration) {
+      manuallyPlayingIds.clear();
+      for (const id of autoVisibleIds) autoPausedIds.add(id);
       playingIds.clear();
       animationFrame = undefined;
       updatePlaybackControls();
@@ -331,34 +340,82 @@ export const initializePlayground = (): void => {
     animationFrame = requestAnimationFrame(tick);
   };
 
-  const togglePlayer = (curve: CurveDefinition): void => {
-    selectCurve(curve);
-    if (playingIds.has(curve.id)) {
-      playingIds.delete(curve.id);
-      if (playingIds.size === 0 && animationFrame !== undefined) {
-        cancelAnimationFrame(animationFrame);
-        animationFrame = undefined;
+  const reconcilePlayingIds = (): void => {
+    const desiredIds = new Set(manuallyPlayingIds);
+    if (autoplayVisible) {
+      for (const id of autoVisibleIds) {
+        if (!autoPausedIds.has(id)) desiredIds.add(id);
       }
+    }
+
+    const clockWasStopped = playingIds.size === 0;
+    for (const id of playingIds) {
+      if (!desiredIds.has(id)) playingIds.delete(id);
+    }
+    for (const id of desiredIds) {
+      if (!playerDefinitions.has(id)) continue;
+      if (!playerProgress.has(id)) playerProgress.set(id, progress);
+      playingIds.add(id);
+    }
+
+    if (playingIds.size === 0) {
+      if (animationFrame !== undefined) cancelAnimationFrame(animationFrame);
+      animationFrame = undefined;
     } else {
-      if (playingIds.size === 0) {
-        const savedProgress = playerProgress.get(curve.id) ?? 0;
-        progress = savedProgress >= 1 ? 0 : savedProgress;
+      if (clockWasStopped) {
+        if (progress >= 1) progress = 0;
+        for (const id of playingIds) playerProgress.set(id, progress);
         animationStarted = performance.now() - progress * duration;
       }
-      playerProgress.set(curve.id, progress);
-      playingIds.add(curve.id);
       ensureClock();
     }
     updatePlaybackControls();
+    renderPlayingFrame();
+  };
+
+  const observeAutoplayPreviews = (): void => {
+    autoplayObserver?.disconnect();
+    autoVisibleIds.clear();
+    reconcilePlayingIds();
+    autoplayObserver ??= new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const id = (entry.target as HTMLElement).dataset['previewId'];
+          if (!id) continue;
+          if (entry.isIntersecting && entry.intersectionRatio > 0) {
+            autoVisibleIds.add(id);
+          } else {
+            autoVisibleIds.delete(id);
+            autoPausedIds.delete(id);
+          }
+        }
+        reconcilePlayingIds();
+      },
+      { threshold: 0.15 },
+    );
+    document
+      .querySelectorAll<HTMLElement>('[data-preview-id]')
+      .forEach((preview) => autoplayObserver?.observe(preview));
+  };
+
+  const togglePlayer = (curve: CurveDefinition): void => {
+    selectCurve(curve);
+    if (playingIds.has(curve.id)) {
+      manuallyPlayingIds.delete(curve.id);
+      if (autoVisibleIds.has(curve.id)) autoPausedIds.add(curve.id);
+    } else {
+      autoPausedIds.delete(curve.id);
+      manuallyPlayingIds.add(curve.id);
+    }
+    reconcilePlayingIds();
     updatePreview(curve, playerProgress.get(curve.id) ?? 0);
     updateActiveCompanion();
   };
 
   const stopAllPlayers = (): void => {
-    playingIds.clear();
-    if (animationFrame !== undefined) cancelAnimationFrame(animationFrame);
-    animationFrame = undefined;
-    updatePlaybackControls();
+    manuallyPlayingIds.clear();
+    for (const id of autoVisibleIds) autoPausedIds.add(id);
+    reconcilePlayingIds();
   };
 
   const renderCurves = (): void => {
@@ -391,6 +448,7 @@ export const initializePlayground = (): void => {
     updateSelectionState();
     updatePlaybackControls();
     refreshVisiblePreviews();
+    observeAutoplayPreviews();
   };
 
   const renderRecipes = (): void => {
@@ -414,6 +472,7 @@ export const initializePlayground = (): void => {
     updateSelectionState();
     updatePlaybackControls();
     refreshVisiblePreviews();
+    observeAutoplayPreviews();
   };
 
   const renderUtilities = (): void => {
@@ -437,6 +496,7 @@ export const initializePlayground = (): void => {
     updateSelectionState();
     updatePlaybackControls();
     refreshVisiblePreviews();
+    observeAutoplayPreviews();
   };
 
   companionPlayButton.addEventListener('click', () => togglePlayer(currentCurve));
@@ -475,6 +535,12 @@ export const initializePlayground = (): void => {
   loopInput.addEventListener('change', () => {
     loopPlayback = loopInput.checked;
     if (playingIds.size > 0) animationStarted = performance.now() - progress * duration;
+  });
+
+  autoplayInput.addEventListener('change', () => {
+    autoplayVisible = autoplayInput.checked;
+    autoPausedIds.clear();
+    reconcilePlayingIds();
   });
 
   stopAllButton.addEventListener('click', stopAllPlayers);
@@ -616,8 +682,4 @@ export const initializePlayground = (): void => {
   renderUtilities();
   durationInput.dispatchEvent(new Event('input'));
   selectCurve(currentCurve);
-
-  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    window.setTimeout(() => togglePlayer(currentCurve), 500);
-  }
 };

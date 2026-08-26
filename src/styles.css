@@ -865,6 +865,86 @@ input[type='range']::-moz-range-thumb {
   background: var(--cream);
 }
 
+.autoplay-control {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin: -5px -8px 0;
+  padding: 13px 16px;
+  border: 1px solid var(--ink);
+  border-radius: 10px;
+  background: var(--lime);
+  cursor: pointer;
+}
+
+.autoplay-prompt,
+.autoplay-prompt > span:last-child {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.autoplay-prompt > span:last-child {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.autoplay-prompt strong {
+  font-size: 0.78rem;
+}
+
+.autoplay-prompt small {
+  color: rgba(23, 23, 17, 0.64);
+  font-family: var(--mono);
+  font-size: 0.52rem;
+}
+
+.autoplay-badge {
+  padding: 5px 8px;
+  border-radius: 99px;
+  background: var(--ink);
+  color: var(--cream);
+  font-family: var(--mono);
+  font-size: 0.5rem;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.autoplay-control input {
+  width: 46px;
+  height: 26px;
+  flex: 0 0 auto;
+  appearance: none;
+  border: 1px solid var(--ink);
+  border-radius: 99px;
+  background: rgba(23, 23, 17, 0.25);
+  cursor: pointer;
+}
+
+.autoplay-control input::before {
+  content: '';
+  width: 20px;
+  height: 20px;
+  display: block;
+  margin: 2px;
+  border-radius: 50%;
+  background: var(--cream);
+  box-shadow: 0 0 0 1px var(--ink);
+  transition: transform 160ms ease;
+}
+
+.autoplay-control input:checked {
+  background: var(--coral);
+}
+
+.autoplay-control input:checked::before {
+  transform: translateX(20px);
+}
+
 .preview-modes {
   min-width: 0;
   margin: 0;
@@ -2314,6 +2394,20 @@ input:focus-visible {
   .playback-options {
     grid-template-columns: 1fr;
     gap: 18px;
+  }
+
+  .autoplay-control {
+    align-items: flex-start;
+    margin: -5px 0 0;
+    padding: 12px;
+  }
+
+  .autoplay-prompt {
+    align-items: flex-start;
+  }
+
+  .autoplay-badge {
+    display: none;
   }
 
   .utility-card {

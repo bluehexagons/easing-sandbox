@@ -61,6 +61,13 @@ app.innerHTML = `
           <button class="filter" type="button" data-filter="expressive">Expressive</button>
         </div>
         <div class="playback-options">
+          <label class="autoplay-control" for="autoplay-visible">
+            <span class="autoplay-prompt">
+              <span class="autoplay-badge">Try it</span>
+              <span><strong>Auto-play visible previews</strong><small>Starts animations as you scroll. May impact performance.</small></span>
+            </span>
+            <input id="autoplay-visible" type="checkbox" role="switch" />
+          </label>
           <fieldset class="preview-modes">
             <legend>Preview as</legend>
             <div role="group" aria-label="Preview visualization">
