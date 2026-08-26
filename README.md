@@ -9,10 +9,12 @@ An interactive TypeScript playground for [`@bluehexagons/easing`](https://github
 ## What it showcases
 
 - All 33 parameter-free curves from `@bluehexagons/easing/named`
-- A shared duration control, per-curve tile players, and a persistent active-curve player with compact and expanded modes
-- Live animation playback, scrubbing, curve plotting, output values, and copyable TypeScript in the expanded player
+- Synchronized multi-curve playback, optional looping, and a shared duration range from 300 milliseconds to 30 seconds
+- Switchable curve, movement, scale, and rotation visualizations across presets, recipes, and composition tools
+- A persistent active-curve player with mobile preview plus compact and expanded modes
+- Live scrubbing, curve plotting, output values, copyable TypeScript, and an editable function sandbox
 - Constructors for springs, cubic Béziers, steps, elastic curves, and monotone splines
-- Composition helpers including `compose`, `mix`, `clamp`, `reverse`, `repeat`, `alternate`, and `invert`
+- Composition helpers including `compose`, `mix`, `clamp`, `reverse`, `repeat`, `alternate`, and `invert`, with one-click application to the active curve
 - Copyable TypeScript examples for every selection
 - Search, curve-family filters, responsive layouts, and reduced-motion support
 

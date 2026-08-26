@@ -158,38 +158,50 @@ export const workshopRecipes: WorkshopRecipe[] = [
   },
 ];
 
-export const utilityRecipes = [
+const linearStops = piecewiseLinear([
+  [0, 0],
+  [0.35, 0.7],
+  [0.7, 0.4],
+  [1, 1],
+]);
+
+export const utilityRecipes: ReadonlyArray<{
+  name: string;
+  fn: EasingFunction;
+  code: string;
+  apply: (curve: EasingFunction) => EasingFunction;
+}> = [
   {
     name: 'Clamp overshoot',
     fn: clamp(easings.backOut),
-    code: `clamp(backOut)`,
+    code: `clamp(activeCurve)`,
+    apply: (curve) => clamp(curve),
   },
   {
     name: 'Reverse direction',
     fn: reverse(easings.quadIn),
-    code: `reverse(quadIn)`,
+    code: `reverse(activeCurve)`,
+    apply: (curve) => reverse(curve),
   },
   {
     name: 'Repeat × 3',
     fn: repeat(easings.sineInOut, 3),
-    code: `repeat(sineInOut, 3)`,
+    code: `repeat(activeCurve, 3)`,
+    apply: (curve) => repeat(curve, 3),
   },
   {
-    name: 'Linear stops',
-    fn: piecewiseLinear([
-      [0, 0],
-      [0.35, 0.7],
-      [0.7, 0.4],
-      [1, 1],
-    ]),
-    code: `piecewiseLinear([[0, 0], [0.35, 0.7], [0.7, 0.4], [1, 1]])`,
+    name: 'Remap through stops',
+    fn: compose(linearStops, easings.sineInOut),
+    code: `compose(stopsCurve, activeCurve)`,
+    apply: (curve) => compose(linearStops, curve),
   },
   {
-    name: 'Invert smoothstep',
+    name: 'Invert output',
     fn: invert(easings.smoothstep),
-    code: `invert(smoothstep)`,
+    code: `invert(activeCurve)`,
+    apply: (curve) => invert(curve),
   },
-] as const;
+];
 
 export const customCurve = (recipe: WorkshopRecipe): CurveDefinition => ({
   id: `recipe-${recipe.id}`,
