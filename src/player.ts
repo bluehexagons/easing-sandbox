@@ -86,6 +86,11 @@ const previewMarkup = (curve: CurveDefinition): string => `
     <span class="preview-scene preview-rotate-scene" data-preview-scene="rotate">
       <span class="preview-orbit"></span><span class="preview-rotate-object">↗</span>
     </span>
+    <span class="preview-scene preview-color-scene" data-preview-scene="color">
+      <span class="preview-color-start" aria-hidden="true"></span>
+      <span class="preview-color-swatch" aria-hidden="true"></span>
+      <span class="preview-color-end" aria-hidden="true"></span>
+    </span>
   </span>`;
 
 export const initializePlayground = (): void => {
@@ -124,6 +129,7 @@ export const initializePlayground = (): void => {
   const companionMarkerRing = select<SVGCircleElement>('#companion-marker-ring');
   const companionPlayButton = select<HTMLButtonElement>('#companion-play');
   const companionDetailsButton = select<HTMLButtonElement>('#companion-details');
+  const companionCloseButton = select<HTMLButtonElement>('#companion-close');
   const sandboxCode = select<HTMLTextAreaElement>('#sandbox-code');
   const sandboxStatus = select<HTMLOutputElement>('#sandbox-status');
   const runSandboxButton = select<HTMLButtonElement>('#run-sandbox');
@@ -161,6 +167,10 @@ export const initializePlayground = (): void => {
   let animationStarted = 0;
   let graphRange = { min: 0, max: 1 };
   let companionExpanded = false;
+  let selectionActive = true;
+  let activeProgress = 0;
+  let activeMirrored = false;
+  let activeBackwards = false;
   let customCurveIndex = 0;
   const playingIds = new Set<string>();
   const manuallyPlayingIds = new Set<string>();
@@ -172,6 +182,7 @@ export const initializePlayground = (): void => {
   let autoplayObserver: IntersectionObserver | undefined;
 
   document.documentElement.dataset['previewMode'] = 'move';
+  document.documentElement.dataset['autoplay'] = autoplayVisible ? 'on' : 'off';
 
   const drawGrid = (): void => {
     const horizontal = [34, 89, 144, 199, 254]
@@ -224,6 +235,11 @@ export const initializePlayground = (): void => {
         String(Math.max(0.25, Math.min(1.5, 0.4 + visualValue))),
       );
       preview.style.setProperty('--preview-rotation', `${visualValue * 300}deg`);
+      const colorMix = Math.max(0, Math.min(1, visualValue));
+      const red = Math.round(255 + (50 - 255) * colorMix);
+      const green = Math.round(101 + (93 - 101) * colorMix);
+      const blue = Math.round(78 + (255 - 78) * colorMix);
+      preview.style.setProperty('--preview-color', `rgb(${red} ${green} ${blue})`);
       const mover = preview.querySelector<HTMLElement>('.preview-mover');
       if (mover) mover.textContent = backwards ? '←' : '→';
       const rotateObject = preview.querySelector<HTMLElement>('.preview-rotate-object');
@@ -240,7 +256,6 @@ export const initializePlayground = (): void => {
   };
 
   const updateActiveCompanion = (): void => {
-    const activeProgress = playerProgress.get(currentCurve.id) ?? 0;
     const value = finiteValue(currentCurve.fn, activeProgress);
     const displayValue = Math.max(-0.2, Math.min(1.2, value));
     progressInput.value = String(activeProgress);
@@ -267,12 +282,7 @@ export const initializePlayground = (): void => {
     graphGuide.setAttribute('x2', markerX.toFixed(2));
     graphGuide.setAttribute('y1', markerY.toFixed(2));
     graphGuide.setAttribute('y2', '254');
-    updatePreview(
-      currentCurve,
-      activeProgress,
-      playerMirrored.get(currentCurve.id) ?? visualMirrored,
-      playerBackwards.get(currentCurve.id) ?? visualBackwards,
-    );
+    updatePreview(currentCurve, activeProgress, activeMirrored, activeBackwards);
   };
 
   const refreshVisiblePreviews = (): void => {
@@ -296,17 +306,25 @@ export const initializePlayground = (): void => {
 
   const updateSelectionState = (): void => {
     document.querySelectorAll<HTMLElement>('.curve-card').forEach((card) => {
-      const selected = card.dataset['curve'] === currentCurve.id;
+      const selected = selectionActive && card.dataset['curve'] === currentCurve.id;
       card.classList.toggle('selected', selected);
       card
         .querySelector<HTMLButtonElement>('[data-select-curve]')
         ?.setAttribute('aria-pressed', String(selected));
     });
     document.querySelectorAll<HTMLElement>('.recipe-card').forEach((card) => {
-      card.classList.toggle('selected', card.dataset['playId'] === currentCurve.id);
+      const selected = selectionActive && card.dataset['curve'] === currentCurve.id;
+      card.classList.toggle('selected', selected);
+      card
+        .querySelector<HTMLButtonElement>('[data-select-curve]')
+        ?.setAttribute('aria-pressed', String(selected));
     });
     document.querySelectorAll<HTMLElement>('.utility-card').forEach((card) => {
-      card.classList.toggle('selected', card.dataset['utilityId'] === currentCurve.id);
+      const selected = selectionActive && card.dataset['utilityId'] === currentCurve.id;
+      card.classList.toggle('selected', selected);
+      card
+        .querySelector<HTMLButtonElement>('[data-select-curve]')
+        ?.setAttribute('aria-pressed', String(selected));
     });
   };
 
@@ -333,6 +351,9 @@ export const initializePlayground = (): void => {
     document.querySelectorAll<HTMLElement>('.utility-card').forEach((card) => {
       card.classList.toggle('playing', playingIds.has(card.dataset['utilityId'] ?? ''));
     });
+    document.querySelectorAll<HTMLElement>('.recipe-card').forEach((card) => {
+      card.classList.toggle('playing', playingIds.has(card.dataset['curve'] ?? ''));
+    });
     playingCount.value = String(playingIds.size);
     stopAllButton.disabled = playingIds.size === 0;
   };
@@ -346,8 +367,20 @@ export const initializePlayground = (): void => {
       manuallyPlayingIds.delete(currentCurve.id);
     }
     playerDefinitions.set(curve.id, curve);
-    if (!playerProgress.has(curve.id)) playerProgress.set(curve.id, 0);
+    const changingCurve = currentCurve.id !== curve.id;
+    if (!playerProgress.has(curve.id)) {
+      playerProgress.set(curve.id, progress);
+      playerMirrored.set(curve.id, visualMirrored);
+      playerBackwards.set(curve.id, visualBackwards);
+    }
     currentCurve = curve;
+    selectionActive = true;
+    companion.classList.add('visible');
+    if (changingCurve) {
+      activeProgress = playerProgress.get(curve.id) ?? progress;
+      activeMirrored = playerMirrored.get(curve.id) ?? visualMirrored;
+      activeBackwards = playerBackwards.get(curve.id) ?? visualBackwards;
+    }
     companionName.textContent = curve.name;
     companionPath.setAttribute('d', miniPath(curve.fn));
     curveDescription.textContent = curve.description;
@@ -369,6 +402,11 @@ export const initializePlayground = (): void => {
           playerBackwards.get(id) ?? visualBackwards,
         );
       }
+    }
+    if (playingIds.has(currentCurve.id)) {
+      activeProgress = playerProgress.get(currentCurve.id) ?? activeProgress;
+      activeMirrored = playerMirrored.get(currentCurve.id) ?? activeMirrored;
+      activeBackwards = playerBackwards.get(currentCurve.id) ?? activeBackwards;
     }
     updateActiveCompanion();
   };
@@ -534,7 +572,7 @@ export const initializePlayground = (): void => {
               ${previewMarkup(curve)}
             </button>
             <div class="curve-card-footer">
-              <span class="curve-family">${escapeHtml(curve.group)}</span>
+              <code class="curve-id" data-copyable>${escapeHtml(curve.shortName)}</code>
               <button class="curve-card-play" type="button" data-play-id="${curve.id}" data-player-name="${escapeHtml(curve.name)}" aria-pressed="false">
                 <span class="play-label">Play</span><span class="pause-label">Pause</span>
                 <svg class="play-icon" viewBox="0 0 18 18" aria-hidden="true"><path d="m5 3 9 6-9 6z" /></svg>
@@ -557,16 +595,22 @@ export const initializePlayground = (): void => {
         const curve = recipeCurves[index];
         if (!curve) return '';
         return `
-          <button class="recipe-card" type="button" data-recipe="${recipe.id}" data-play-id="${curve.id}" data-player-name="${escapeHtml(curve.name)}" aria-pressed="false">
+          <article class="recipe-card" data-recipe="${recipe.id}" data-curve="${curve.id}">
             <span class="recipe-number">${String(index + 1).padStart(2, '0')}</span>
             ${previewMarkup(curve)}
             <span class="recipe-copy">
-              <span class="recipe-eyebrow">${escapeHtml(recipe.eyebrow)}</span>
-              <strong>${escapeHtml(recipe.name)}</strong>
+              <code class="recipe-eyebrow" data-copyable>${escapeHtml(recipe.eyebrow)}</code>
+              <button class="recipe-select" type="button" data-select-curve="${curve.id}" aria-pressed="false">${escapeHtml(recipe.name)}</button>
               <span>${escapeHtml(recipe.description)}</span>
             </span>
-            <span class="recipe-action"><span data-play-label>Load + play</span><span aria-hidden="true">→</span></span>
-          </button>`;
+            <div class="recipe-action">
+              <button class="recipe-play" type="button" data-play-id="${curve.id}" data-player-name="${escapeHtml(curve.name)}" aria-pressed="false">
+                <span class="play-label">Play</span><span class="pause-label">Pause</span>
+                <svg class="play-icon" viewBox="0 0 18 18" aria-hidden="true"><path d="m5 3 9 6-9 6z" /></svg>
+                <svg class="pause-icon" viewBox="0 0 18 18" aria-hidden="true"><path d="M5 3h3v12H5zm5 0h3v12h-3z" /></svg>
+              </button>
+            </div>
+          </article>`;
       })
       .join('');
     updateSelectionState();
@@ -583,7 +627,7 @@ export const initializePlayground = (): void => {
         return `
           <article class="utility-card" data-utility-id="${curve.id}">
             ${previewMarkup(curve)}
-            <span class="utility-copy"><strong>${escapeHtml(utility.name)}</strong><code>${escapeHtml(utility.code)}</code></span>
+            <span class="utility-copy"><button class="utility-select" type="button" data-select-curve="${curve.id}" aria-pressed="false">${escapeHtml(utility.name)}</button><code data-copyable>${escapeHtml(utility.code)}</code></span>
             <button class="utility-play" type="button" data-play-id="${curve.id}" data-player-name="${escapeHtml(curve.name)}" aria-pressed="false">
               <span class="play-label">Play</span><span class="pause-label">Pause</span>
               <svg class="play-icon" viewBox="0 0 18 18" aria-hidden="true"><path d="m5 3 9 6-9 6z" /></svg>
@@ -600,6 +644,21 @@ export const initializePlayground = (): void => {
   };
 
   companionPlayButton.addEventListener('click', () => togglePlayer(currentCurve));
+
+  companionCloseButton.addEventListener('click', () => {
+    selectionActive = false;
+    companionExpanded = false;
+    companion.classList.remove('visible', 'expanded');
+    companionDetailsButton.setAttribute('aria-expanded', 'false');
+    companionDetailsButton.querySelector('span')!.textContent = 'Details';
+    updateSelectionState();
+  });
+
+  select<HTMLElement>('.companion-summary').addEventListener('click', (event) => {
+    const target = event.target as Element;
+    if (target.closest('#companion-play, #companion-close, #companion-details')) return;
+    if (!companionExpanded) companionDetailsButton.click();
+  });
 
   companionDetailsButton.addEventListener('click', () => {
     companionExpanded = !companionExpanded;
@@ -619,6 +678,9 @@ export const initializePlayground = (): void => {
     playerProgress.set(currentCurve.id, progress);
     playerMirrored.set(currentCurve.id, visualMirrored);
     playerBackwards.set(currentCurve.id, visualBackwards);
+    activeProgress = progress;
+    activeMirrored = visualMirrored;
+    activeBackwards = visualBackwards;
     for (const id of playingIds) {
       playerProgress.set(id, progress);
       playerMirrored.set(id, visualMirrored);
@@ -703,6 +765,8 @@ export const initializePlayground = (): void => {
 
   autoplayInput.addEventListener('change', () => {
     autoplayVisible = autoplayInput.checked;
+    document.documentElement.dataset['autoplay'] = autoplayVisible ? 'on' : 'off';
+    if (autoplayVisible) manuallyPlayingIds.clear();
     autoPausedIds.clear();
     reconcilePlayingIds();
   });
@@ -736,9 +800,17 @@ export const initializePlayground = (): void => {
   });
 
   recipeGrid.addEventListener('click', (event) => {
-    const button = (event.target as Element).closest<HTMLButtonElement>('[data-play-id]');
-    const curve = button ? playerDefinitions.get(button.dataset['playId'] ?? '') : undefined;
-    if (curve) togglePlayer(curve);
+    const target = event.target as Element;
+    const playButton = target.closest<HTMLButtonElement>('[data-play-id]');
+    if (playButton) {
+      const curve = playerDefinitions.get(playButton.dataset['playId'] ?? '');
+      if (curve) togglePlayer(curve);
+      return;
+    }
+    if (target.closest('[data-copyable]')) return;
+    const card = target.closest<HTMLElement>('.recipe-card');
+    const curve = card ? playerDefinitions.get(card.dataset['curve'] ?? '') : undefined;
+    if (curve) selectCurve(curve);
   });
 
   utilityList.addEventListener('click', (event) => {
@@ -750,7 +822,13 @@ export const initializePlayground = (): void => {
       return;
     }
     const applyButton = target.closest<HTMLButtonElement>('[data-apply-utility]');
-    if (!applyButton) return;
+    if (!applyButton) {
+      if (target.closest('[data-copyable]')) return;
+      const card = target.closest<HTMLElement>('.utility-card');
+      const curve = card ? playerDefinitions.get(card.dataset['utilityId'] ?? '') : undefined;
+      if (curve) selectCurve(curve);
+      return;
+    }
     const index = Number(applyButton.dataset['applyUtility']);
     const utility = utilityRecipes[index];
     if (!utility) return;
@@ -836,6 +914,7 @@ export const initializePlayground = (): void => {
   window.addEventListener('keydown', (event) => {
     const target = event.target as HTMLElement;
     if (event.code !== 'Space' || ['INPUT', 'BUTTON', 'TEXTAREA'].includes(target.tagName)) return;
+    if (!selectionActive) return;
     event.preventDefault();
     togglePlayer(currentCurve);
   });

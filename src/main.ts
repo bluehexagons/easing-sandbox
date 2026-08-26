@@ -67,6 +67,7 @@ app.innerHTML = `
               <button class="active" type="button" data-preview-mode="move" aria-pressed="true">Move</button>
               <button type="button" data-preview-mode="scale" aria-pressed="false">Scale</button>
               <button type="button" data-preview-mode="rotate" aria-pressed="false">Rotate</button>
+              <button type="button" data-preview-mode="color" aria-pressed="false">Color</button>
             </div>
           </fieldset>
           <label class="duration-control" for="duration">
@@ -130,7 +131,7 @@ app.innerHTML = `
           <p>Examples built with the package's constructors and combinators.</p>
           <div class="workshop-instruction">
             <span class="instruction-number">01</span>
-            <span><strong>Select an example</strong><small>Loads it into the active player and starts playback.</small></span>
+            <span><strong>Select an example</strong><small>Inspect it in the active player. Use Play when auto-play is off.</small></span>
             <span class="instruction-arrow" aria-hidden="true">↓</span>
           </div>
         </div>
@@ -149,6 +150,9 @@ app.innerHTML = `
   </main>
 
   <aside class="curve-companion visible" id="curve-companion" aria-label="Active curve player">
+    <button class="companion-close" id="companion-close" type="button" aria-label="Close active curve player">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 4 8 8m0-8-8 8" /></svg>
+    </button>
     <div class="companion-summary">
       <div class="companion-copy">
         <span class="companion-kicker">Active curve</span>
