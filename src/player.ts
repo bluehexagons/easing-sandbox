@@ -1,5 +1,11 @@
 import type { EasingFunction } from '@bluehexagons/easing';
 import {
+  advancedRecipes,
+  defaultAdvancedValues,
+  type AdvancedRecipe,
+  type AdvancedValues,
+} from './advanced';
+import {
   customCurve,
   namedCurves,
   utilityRecipes,
@@ -118,6 +124,21 @@ export const initializePlayground = (): void => {
   const curveGrid = select<HTMLElement>('#curve-grid');
   const recipeGrid = select<HTMLElement>('#recipe-grid');
   const utilityList = select<HTMLElement>('#utility-list');
+  const advancedWorkbench = select<HTMLElement>('.advanced-workbench');
+  const advancedRecipesElement = select<HTMLElement>('#advanced-recipes');
+  const advancedPreview = select<HTMLElement>('#advanced-preview');
+  const advancedControls = select<HTMLElement>('#advanced-controls');
+  const advancedApi = select<HTMLElement>('#advanced-api');
+  const advancedName = select<HTMLElement>('#advanced-name');
+  const advancedCategory = select<HTMLElement>('#advanced-category');
+  const advancedDescription = select<HTMLElement>('#advanced-description');
+  const advancedSamples = select<HTMLElement>('#advanced-samples');
+  const advancedStaticPath = select<SVGPathElement>('#advanced-static-path');
+  const advancedCode = select<HTMLElement>('#advanced-code');
+  const advancedUseButton = select<HTMLButtonElement>('#advanced-use');
+  const advancedResetButton = select<HTMLButtonElement>('#advanced-reset');
+  const advancedCopyButton = select<HTMLButtonElement>('#advanced-copy');
+  const advancedPlayButton = select<HTMLButtonElement>('.advanced-play');
   const emptyState = select<HTMLElement>('#empty-state');
   const searchInput = select<HTMLInputElement>('#curve-search');
   const companion = select<HTMLElement>('#curve-companion');
@@ -145,8 +166,23 @@ export const initializePlayground = (): void => {
     code: `import { /* curves and utilities */ } from '@bluehexagons/easing';\n\nconst curve = ${utility.code};`,
     custom: true,
   }));
+  const initialAdvancedRecipe = advancedRecipes[0];
+  if (!initialAdvancedRecipe) throw new Error('No advanced curve recipes were loaded');
+  let activeAdvancedRecipe: AdvancedRecipe = initialAdvancedRecipe;
+  let advancedValues: AdvancedValues = defaultAdvancedValues(activeAdvancedRecipe);
+  const buildAdvancedCurve = (): CurveDefinition => ({
+    id: 'advanced-live',
+    name: activeAdvancedRecipe.name,
+    shortName: activeAdvancedRecipe.api,
+    group: 'expressive',
+    description: activeAdvancedRecipe.description,
+    fn: activeAdvancedRecipe.build(advancedValues),
+    code: activeAdvancedRecipe.code(advancedValues),
+    custom: true,
+  });
+  let advancedCurve = buildAdvancedCurve();
   const playerDefinitions = new Map<string, CurveDefinition>();
-  for (const curve of [...namedCurves, ...recipeCurves, ...utilityCurves]) {
+  for (const curve of [...namedCurves, ...recipeCurves, ...utilityCurves, advancedCurve]) {
     playerDefinitions.set(curve.id, curve);
   }
 
@@ -326,6 +362,10 @@ export const initializePlayground = (): void => {
         .querySelector<HTMLButtonElement>('[data-select-curve]')
         ?.setAttribute('aria-pressed', String(selected));
     });
+    advancedWorkbench.classList.toggle(
+      'selected',
+      selectionActive && currentCurve.id === advancedCurve.id,
+    );
   };
 
   const updatePlaybackControls = (): void => {
@@ -354,6 +394,7 @@ export const initializePlayground = (): void => {
     document.querySelectorAll<HTMLElement>('.recipe-card').forEach((card) => {
       card.classList.toggle('playing', playingIds.has(card.dataset['curve'] ?? ''));
     });
+    advancedWorkbench.classList.toggle('playing', playingIds.has(advancedCurve.id));
     playingCount.value = String(playingIds.size);
     stopAllButton.disabled = playingIds.size === 0;
   };
@@ -643,6 +684,86 @@ export const initializePlayground = (): void => {
     observeAutoplayPreviews();
   };
 
+  const renderAdvancedRecipeTabs = (): void => {
+    advancedRecipesElement.innerHTML = advancedRecipes
+      .map(
+        (recipe, index) => `
+          <button type="button" role="tab" data-advanced-recipe="${recipe.id}" aria-selected="${String(recipe.id === activeAdvancedRecipe.id)}" class="${recipe.id === activeAdvancedRecipe.id ? 'active' : ''}">
+            <span>${String(index + 1).padStart(2, '0')}</span>
+            <span><code title="${escapeHtml(recipe.api)}">${escapeHtml(recipe.api)}</code><small>${escapeHtml(recipe.category)}</small></span>
+            <span aria-hidden="true">→</span>
+          </button>`,
+      )
+      .join('');
+  };
+
+  const renderAdvancedControls = (): void => {
+    advancedControls.innerHTML = activeAdvancedRecipe.controls
+      .map((control) => {
+        const value = advancedValues[control.key] ?? control.defaultValue;
+        if (control.kind === 'choice') {
+          return `
+            <label class="advanced-choice">
+              <span>${escapeHtml(control.label)}</span>
+              <select data-advanced-input="${control.key}">
+                ${control.options
+                  .map(
+                    (option) =>
+                      `<option value="${escapeHtml(option.value)}" ${option.value === value ? 'selected' : ''}>${escapeHtml(option.label)}</option>`,
+                  )
+                  .join('')}
+              </select>
+            </label>`;
+        }
+        const rangePosition = ((Number(value) - control.min) / (control.max - control.min)) * 100;
+        return `
+          <label class="advanced-range">
+            <span><span>${escapeHtml(control.label)}</span><output data-advanced-output="${control.key}">${escapeHtml(String(value))}${escapeHtml(control.suffix ?? '')}</output></span>
+            <input type="range" min="${control.min}" max="${control.max}" step="${control.step}" value="${value}" data-advanced-input="${control.key}" style="--range-progress: ${rangePosition}%" />
+            <span class="advanced-range-bounds" aria-hidden="true"><span>${control.min}</span><span>${control.max}</span></span>
+          </label>`;
+      })
+      .join('');
+  };
+
+  const rebuildAdvancedCurve = (): void => {
+    advancedCurve = buildAdvancedCurve();
+    playerDefinitions.set(advancedCurve.id, advancedCurve);
+    advancedApi.textContent = activeAdvancedRecipe.api;
+    advancedName.textContent = activeAdvancedRecipe.name;
+    advancedCategory.textContent = activeAdvancedRecipe.category;
+    advancedDescription.textContent = activeAdvancedRecipe.description;
+    advancedCode.textContent = advancedCurve.code;
+    advancedPlayButton.dataset['playerName'] = activeAdvancedRecipe.name;
+    advancedPreview
+      .querySelector<SVGPathElement>('.mini-curve')
+      ?.setAttribute('d', miniPath(advancedCurve.fn));
+    advancedStaticPath.setAttribute('d', miniPath(advancedCurve.fn));
+    advancedSamples.innerHTML = [0.25, 0.5, 0.75]
+      .map(
+        (time) =>
+          `<div><dt>f(${time})</dt><dd>${finiteValue(advancedCurve.fn, time).toFixed(3)}</dd></div>`,
+      )
+      .join('');
+    if (currentCurve.id === advancedCurve.id) selectCurve(advancedCurve);
+    updatePreview(
+      advancedCurve,
+      playerProgress.get(advancedCurve.id) ?? progress,
+      playerMirrored.get(advancedCurve.id) ?? visualMirrored,
+      playerBackwards.get(advancedCurve.id) ?? visualBackwards,
+    );
+    updateSelectionState();
+    updatePlaybackControls();
+  };
+
+  const renderAdvanced = (): void => {
+    renderAdvancedRecipeTabs();
+    renderAdvancedControls();
+    advancedPreview.innerHTML = previewMarkup(advancedCurve);
+    rebuildAdvancedCurve();
+    observeAutoplayPreviews();
+  };
+
   companionPlayButton.addEventListener('click', () => togglePlayer(currentCurve));
 
   companionCloseButton.addEventListener('click', () => {
@@ -784,6 +905,69 @@ export const initializePlayground = (): void => {
     });
   });
 
+  advancedRecipesElement.addEventListener('click', (event) => {
+    const button = (event.target as Element).closest<HTMLButtonElement>('[data-advanced-recipe]');
+    if (!button) return;
+    const recipe = advancedRecipes.find(
+      (candidate) => candidate.id === button.dataset['advancedRecipe'],
+    );
+    if (!recipe || recipe.id === activeAdvancedRecipe.id) return;
+    activeAdvancedRecipe = recipe;
+    advancedValues = defaultAdvancedValues(recipe);
+    renderAdvancedRecipeTabs();
+    renderAdvancedControls();
+    rebuildAdvancedCurve();
+  });
+
+  advancedControls.addEventListener('input', (event) => {
+    const input = (event.target as Element).closest<HTMLInputElement | HTMLSelectElement>(
+      '[data-advanced-input]',
+    );
+    if (!input) return;
+    const key = input.dataset['advancedInput'];
+    if (!key) return;
+    const control = activeAdvancedRecipe.controls.find((candidate) => candidate.key === key);
+    if (!control) return;
+    advancedValues[key] = control.kind === 'range' ? Number(input.value) : input.value;
+    if (control.kind === 'range') {
+      const output = advancedControls.querySelector<HTMLOutputElement>(
+        `[data-advanced-output="${key}"]`,
+      );
+      if (output) output.value = `${input.value}${control.suffix ?? ''}`;
+      input.style.setProperty(
+        '--range-progress',
+        `${((Number(input.value) - control.min) / (control.max - control.min)) * 100}%`,
+      );
+    }
+    rebuildAdvancedCurve();
+  });
+
+  advancedResetButton.addEventListener('click', () => {
+    advancedValues = defaultAdvancedValues(activeAdvancedRecipe);
+    renderAdvancedControls();
+    rebuildAdvancedCurve();
+  });
+
+  advancedUseButton.addEventListener('click', () => selectCurve(advancedCurve));
+  advancedPlayButton.addEventListener('click', () => togglePlayer(advancedCurve));
+
+  advancedCopyButton.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(advancedCurve.code);
+      advancedCopyButton.textContent = 'Copied';
+    } catch {
+      advancedCopyButton.textContent = 'Select text';
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(advancedCode);
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    }
+    window.setTimeout(() => {
+      advancedCopyButton.textContent = 'Copy';
+    }, 1600);
+  });
+
   curveGrid.addEventListener('click', (event) => {
     const target = event.target as Element;
     const playButton = target.closest<HTMLButtonElement>('[data-play-id]');
@@ -920,6 +1104,7 @@ export const initializePlayground = (): void => {
   });
 
   drawGrid();
+  renderAdvanced();
   renderCurves();
   renderRecipes();
   renderUtilities();

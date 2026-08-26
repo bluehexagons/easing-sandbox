@@ -16,6 +16,7 @@ app.innerHTML = `
     <nav aria-label="Main navigation">
       <a href="#curves">Curves</a>
       <a href="#workshop">Examples</a>
+      <a href="#advanced">Builders</a>
       <a class="source-link" href="https://github.com/bluehexagons/easing" target="_blank" rel="noreferrer">
         Source
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 3.5h8v8M12 4 4 12" /></svg>
@@ -139,7 +140,59 @@ app.innerHTML = `
       <div class="recipe-grid" id="recipe-grid"></div>
     </section>
 
-    <section class="utility-section" aria-labelledby="utilities-title">
+    <section class="advanced-section" id="advanced" aria-labelledby="advanced-title">
+      <header class="advanced-heading">
+        <div>
+          <p class="section-kicker">Advanced API</p>
+          <h2 id="advanced-title">Tune a constructor</h2>
+        </div>
+        <p>Choose a function, adjust its inputs, and use the generated curve anywhere else on the page.</p>
+      </header>
+      <div class="advanced-workbench" data-advanced-curve="advanced-live">
+        <div class="advanced-recipes" id="advanced-recipes" role="tablist" aria-label="Advanced easing functions"></div>
+        <article class="advanced-stage" aria-labelledby="advanced-name">
+          <div class="advanced-stage-heading">
+            <div>
+              <code id="advanced-api" data-copyable>spring(options)</code>
+              <h3 id="advanced-name">Damped spring</h3>
+            </div>
+            <span id="advanced-category">Physics</span>
+          </div>
+          <p id="advanced-description"></p>
+          <div class="advanced-visuals">
+            <div class="advanced-preview" id="advanced-preview"></div>
+            <div class="advanced-curve-readout">
+              <span>Curve shape</span>
+              <svg viewBox="0 0 120 64" role="img" aria-label="Current advanced curve shape">
+                <path class="mini-grid" d="M8 56H112M8 56V8" />
+                <path class="mini-reference" d="M8 56L112 8" />
+                <path class="mini-curve" id="advanced-static-path" />
+              </svg>
+              <span aria-hidden="true"><span>0</span><span>1</span></span>
+            </div>
+          </div>
+          <dl class="advanced-samples" id="advanced-samples" aria-label="Sample curve outputs"></dl>
+          <div class="advanced-actions">
+            <button class="advanced-use" id="advanced-use" type="button">Use in active player <span aria-hidden="true">↗</span></button>
+            <button class="advanced-play" type="button" data-play-id="advanced-live" data-player-name="advanced curve" aria-pressed="false">
+              <span class="play-label">Play preview</span><span class="pause-label">Pause preview</span>
+              <svg class="play-icon" viewBox="0 0 18 18" aria-hidden="true"><path d="m5 3 9 6-9 6z" /></svg>
+              <svg class="pause-icon" viewBox="0 0 18 18" aria-hidden="true"><path d="M5 3h3v12H5zm5 0h3v12h-3z" /></svg>
+            </button>
+          </div>
+        </article>
+        <aside class="advanced-editor" aria-label="Constructor inputs and generated code">
+          <div class="advanced-controls-heading"><span>Inputs</span><button id="advanced-reset" type="button">Reset</button></div>
+          <div class="advanced-controls" id="advanced-controls"></div>
+          <div class="advanced-code">
+            <div><span>Generated TypeScript</span><button id="advanced-copy" type="button">Copy</button></div>
+            <pre><code id="advanced-code" data-copyable></code></pre>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="utility-section" id="utilities" aria-labelledby="utilities-title">
       <div>
         <p class="section-kicker">Utilities</p>
         <h2 id="utilities-title">Transform a curve</h2>

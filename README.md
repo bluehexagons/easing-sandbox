@@ -13,10 +13,10 @@ A TypeScript browser interface for [`@bluehexagons/easing`](https://github.com/b
 - Loop, rewind, same-easing alternate, once, and custom timeline repeat styles
 - Custom timeline recipes for an active curve or composition, sine wobble, rigid steps, and bouncing return motion
 - A shared duration range from 300 milliseconds to 30 seconds
-- Switchable curve, movement, scale, and rotation visualizations across presets, recipes, and composition tools
+- Switchable curve, movement, scale, rotation, and color visualizations across presets, recipes, and composition tools
 - A persistent active-curve player with mobile preview plus compact and expanded modes
 - Live scrubbing, curve plotting, output values, copyable TypeScript, and an editable function sandbox
-- Constructors for springs, cubic Béziers, steps, elastic curves, and monotone splines
+- A live advanced-constructor workbench for springs, elastic responses, cubic Béziers, Hermite slopes, monotone splines, steps, and weighted blends
 - Composition helpers including `compose`, `mix`, `clamp`, `reverse`, `repeat`, `alternate`, and `invert`, with one-click application to the active curve
 - Copyable TypeScript examples for every selection
 - Search, curve-family filters, responsive layouts, and reduced-motion support
