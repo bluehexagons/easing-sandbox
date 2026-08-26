@@ -134,7 +134,7 @@ export const initializePlayground = (): void => {
     name: utility.name,
     shortName: utility.name,
     group: 'classic',
-    description: `A focused example of the ${utility.name.toLowerCase()} operation.`,
+    description: `Example output for ${utility.name.toLowerCase()}.`,
     fn: utility.fn,
     code: `import { /* curves and utilities */ } from '@bluehexagons/easing';\n\nconst curve = ${utility.code};`,
     custom: true,

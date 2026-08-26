@@ -15,7 +15,7 @@ app.innerHTML = `
     </a>
     <nav aria-label="Main navigation">
       <a href="#curves">Curves</a>
-      <a href="#workshop">Workshop</a>
+      <a href="#workshop">Examples</a>
       <a class="source-link" href="https://github.com/bluehexagons/easing" target="_blank" rel="noreferrer">
         Source
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 3.5h8v8M12 4 4 12" /></svg>
@@ -26,26 +26,18 @@ app.innerHTML = `
   <main id="top">
     <section class="hero" aria-labelledby="hero-title">
       <div class="hero-copy">
-        <p class="eyebrow"><span></span> TypeScript motion playground</p>
-        <h1 id="hero-title">Shape the<br /><em>in-between.</em></h1>
-        <p class="hero-intro">Explore, compare, and compose easing curves from <a href="https://github.com/bluehexagons/easing" target="_blank" rel="noreferrer">@bluehexagons/easing</a>.</p>
-      </div>
-      <div class="hero-scribble" aria-hidden="true">
-        <svg viewBox="0 0 330 210">
-          <path class="scribble-line" d="M12 182C79 181 48 29 153 29c68 0 47 128 164 84" />
-          <circle cx="153" cy="29" r="6" />
-          <path class="scribble-arrow" d="m298 102 20 11-13 19" />
-        </svg>
-        <span>pick a curve<br />and press play</span>
+        <p class="eyebrow"><span></span> TypeScript playground</p>
+        <h1 id="hero-title">Easing<br /><em>sandbox.</em></h1>
+        <p class="hero-intro">Test and compose curves from <a href="https://github.com/bluehexagons/easing" target="_blank" rel="noreferrer">@bluehexagons/easing</a>.</p>
       </div>
     </section>
 
     <section class="curves-section" id="curves" aria-labelledby="curves-title">
       <div class="section-header">
         <div>
-          <p class="section-kicker">The collection</p>
-          <h2 id="curves-title">Find your rhythm</h2>
-          <p>Every parameter-free curve in the package, with its own player. Pick one to keep its details close as you browse.</p>
+          <p class="section-kicker">Curves</p>
+          <h2 id="curves-title">Preset curves</h2>
+          <p>All parameter-free exports in the package. Select a card to inspect its graph and code.</p>
         </div>
         <label class="search-box">
           <span class="sr-only">Search curves</span>
@@ -63,8 +55,8 @@ app.innerHTML = `
         <div class="playback-options">
           <label class="autoplay-control" for="autoplay-visible">
             <span class="autoplay-prompt">
-              <span class="autoplay-badge">Try it</span>
-              <span><strong>Auto-play visible previews</strong><small>Starts animations as you scroll. May impact performance.</small></span>
+              <span class="autoplay-badge">Optional</span>
+              <span><strong>Auto-play visible previews</strong><small>Starts previews as they enter the viewport. Uses more CPU.</small></span>
             </span>
             <input id="autoplay-visible" type="checkbox" role="switch" />
           </label>
@@ -91,33 +83,33 @@ app.innerHTML = `
             <div role="group" aria-label="Repeat style">
               <button type="button" data-repeat-style="loop" aria-pressed="false"><strong>Loop</strong><small>Restart at 0</small></button>
               <button type="button" data-repeat-style="rewind" aria-pressed="false"><strong>Rewind</strong><small>Retrace the curve</small></button>
-              <button class="active" type="button" data-repeat-style="alternate" aria-pressed="true"><strong>Alternate</strong><small>Ease both ways</small></button>
+              <button class="active" type="button" data-repeat-style="alternate" aria-pressed="true"><strong>Alternate</strong><small>0→1 each way</small></button>
               <button type="button" data-repeat-style="once" aria-pressed="false"><strong>Once</strong><small>One pass only</small></button>
-              <button type="button" data-repeat-style="custom" aria-pressed="false"><strong>Custom</strong><small>Compose time</small></button>
+              <button type="button" data-repeat-style="custom" aria-pressed="false"><strong>Custom</strong><small>Use a timeline</small></button>
             </div>
             <p id="repeat-description" aria-live="polite">Runs 0→1 in each direction, applying the same easing on both passes.</p>
           </fieldset>
           <section class="custom-timeline" id="custom-timeline" aria-labelledby="custom-timeline-title" hidden>
             <div>
-              <span class="custom-timeline-kicker">Timeline recipes</span>
-              <strong id="custom-timeline-title">Choose what controls time</strong>
+              <span class="custom-timeline-kicker">Custom timeline</span>
+              <strong id="custom-timeline-title">Timeline source</strong>
             </div>
             <div class="timeline-presets" role="group" aria-label="Custom timeline recipe">
               <button type="button" data-timeline-preset="active" aria-pressed="false">
                 <svg viewBox="0 0 80 32" aria-hidden="true"><path d="M3 28C22 28 20 5 42 9s18-5 35-5" /></svg>
-                <span><strong>Active curve</strong><small id="active-timeline-name">Capture selected</small></span>
+                <span><strong>Active curve</strong><small id="active-timeline-name">Capture active</small></span>
               </button>
               <button class="active" type="button" data-timeline-preset="wobble" aria-pressed="true">
                 <svg viewBox="0 0 80 32" aria-hidden="true"><path d="M3 28C10 28 12 4 40 4s30 24 37 24" /></svg>
-                <span><strong>Sine wobble</strong><small>Smooth pendulum</small></span>
+                <span><strong>Sine wobble</strong><small>Smooth 0→1→0</small></span>
               </button>
               <button type="button" data-timeline-preset="steps" aria-pressed="false">
                 <svg viewBox="0 0 80 32" aria-hidden="true"><path d="M3 28h10v-6h10v-6h10v-6h14v6h10v6h10v6h10" /></svg>
-                <span><strong>Rigid steps</strong><small>Five hard states</small></span>
+                <span><strong>Stepped timeline</strong><small>Five levels</small></span>
               </button>
               <button type="button" data-timeline-preset="bounce" aria-pressed="false">
                 <svg viewBox="0 0 80 32" aria-hidden="true"><path d="M3 28c8 0 4-24 25-24 8 0 5 9 12 9s4-9 12-9c21 0 17 24 25 24" /></svg>
-                <span><strong>Bounce back</strong><small>Land at both ends</small></span>
+                <span><strong>Bounce timeline</strong><small>Bounce at 1 and 0</small></span>
               </button>
             </div>
             <code id="timeline-code">compose(sineInOut, triangle)</code>
@@ -131,14 +123,14 @@ app.innerHTML = `
     <section class="workshop-section" id="workshop" aria-labelledby="workshop-title">
       <div class="workshop-intro">
         <div class="workshop-heading">
-          <p class="section-kicker light">Beyond the presets</p>
-          <h2 id="workshop-title">Build something <em>with character.</em></h2>
+          <p class="section-kicker light">Constructors</p>
+          <h2 id="workshop-title">Configured curves</h2>
         </div>
         <div class="workshop-guide">
-          <p>The library's constructors and combinators turn a few expressive ingredients into reusable motion.</p>
+          <p>Examples built with the package's constructors and combinators.</p>
           <div class="workshop-instruction">
             <span class="instruction-number">01</span>
-            <span><strong>Choose a recipe</strong><small>It loads into the active player and starts immediately.</small></span>
+            <span><strong>Select an example</strong><small>Loads it into the active player and starts playback.</small></span>
             <span class="instruction-arrow" aria-hidden="true">↓</span>
           </div>
         </div>
@@ -148,9 +140,9 @@ app.innerHTML = `
 
     <section class="utility-section" aria-labelledby="utilities-title">
       <div>
-        <p class="section-kicker">Small tools, big range</p>
-        <h2 id="utilities-title">Compose your own</h2>
-        <p>Preview each operation on its own, or apply it directly to the curve in your active player.</p>
+        <p class="section-kicker">Utilities</p>
+        <h2 id="utilities-title">Transform a curve</h2>
+        <p>Preview an operation or apply it to the active curve.</p>
       </div>
       <div class="utility-list" id="utility-list"></div>
     </section>
@@ -246,7 +238,7 @@ return Math.min(1, Math.max(0, eased));</textarea>
     <div class="footer-mark" aria-hidden="true">
       <svg viewBox="0 0 72 72"><path d="M8 55c18 0 14-38 32-38 12 0 10 28 24 22" /></svg>
     </div>
-    <p>Made to explore <a href="https://github.com/bluehexagons/easing" target="_blank" rel="noreferrer">@bluehexagons/easing</a>.</p>
+    <p>Built with <a href="https://github.com/bluehexagons/easing" target="_blank" rel="noreferrer">@bluehexagons/easing</a>.</p>
     <p class="footer-note">TypeScript · No runtime dependencies beyond the curves</p>
   </footer>
 `;

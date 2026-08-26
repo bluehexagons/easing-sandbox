@@ -156,13 +156,11 @@ nav a:not(.source-link):hover::after {
 
 .hero {
   width: min(100% - 48px, 1240px);
-  min-height: 500px;
+  min-height: 360px;
   margin: 0 auto;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 70px;
-  padding: 76px 0 88px;
+  padding: 64px 0 72px;
 }
 
 .hero-copy {
@@ -227,39 +225,6 @@ h1 em,
   color: var(--ink);
   text-decoration-color: var(--coral);
   text-underline-offset: 4px;
-}
-
-.hero-scribble {
-  position: relative;
-  flex: 0 1 340px;
-  margin-top: 46px;
-  transform: rotate(-4deg);
-}
-
-.hero-scribble svg {
-  width: 100%;
-  overflow: visible;
-}
-
-.scribble-line,
-.scribble-arrow {
-  fill: none;
-  stroke: var(--ink);
-  stroke-width: 2;
-  stroke-linecap: round;
-}
-
-.hero-scribble circle {
-  fill: var(--coral);
-}
-
-.hero-scribble span {
-  position: absolute;
-  right: 0;
-  top: 25px;
-  font-family: var(--serif);
-  font-size: 1rem;
-  line-height: 1.1;
 }
 
 .playground {
@@ -2325,10 +2290,6 @@ input:focus-visible {
     width: min(100% - 32px, 1240px);
     min-height: auto;
     padding: 70px 0;
-  }
-
-  .hero-scribble {
-    display: none;
   }
 
   .curves-section,

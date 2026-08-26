@@ -2,11 +2,11 @@
 
 [![Test and deploy Pages](https://github.com/bluehexagons/easing-sandbox/actions/workflows/pages.yml/badge.svg)](https://github.com/bluehexagons/easing-sandbox/actions/workflows/pages.yml)
 
-An interactive TypeScript playground for [`@bluehexagons/easing`](https://github.com/bluehexagons/easing). It makes the package's full curve registry, configurable constructors, and composition utilities easy to see and feel in a browser.
+A TypeScript browser interface for [`@bluehexagons/easing`](https://github.com/bluehexagons/easing), including its named curves, constructors, and composition utilities.
 
-**[Try Easing Lab on GitHub Pages](https://bluehexagons.github.io/easing-sandbox/)**
+**[Open Easing Lab](https://bluehexagons.github.io/easing-sandbox/)**
 
-## What it showcases
+## Features
 
 - All 33 parameter-free curves from `@bluehexagons/easing/named`
 - Synchronized multi-curve playback and opt-in viewport autoplay that follows previews as you scroll

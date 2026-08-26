@@ -40,18 +40,15 @@ const familyOf = (name: string): string => name.replace(/(InOut|In|Out)$/, '');
 const describe = (name: string): string => {
   const family = familyOf(name);
   if (name === 'linear') return 'Constant speed from start to finish.';
-  if (name === 'smoothstep') return 'Soft endpoints with zero starting and ending velocity.';
+  if (name === 'smoothstep') return 'Cubic interpolation with zero slope at both endpoints.';
   if (name === 'smootherstep')
-    return 'Extra-polished endpoints with zero velocity and acceleration.';
+    return 'Quintic interpolation with zero first and second derivatives at both endpoints.';
   const direction = name.endsWith('InOut')
-    ? 'Accelerates, then settles'
+    ? 'ease-in-out'
     : name.endsWith('In')
-      ? 'Builds momentum from rest'
-      : 'Arrives with a gentle finish';
-  const character = expressiveFamilies.has(family)
-    ? ` with ${family} character.`
-    : ` using a ${family} curve.`;
-  return direction + character;
+      ? 'ease-in'
+      : 'ease-out';
+  return `${humanize(family)} ${direction} curve.`;
 };
 
 export const namedCurves: CurveDefinition[] = (
@@ -87,57 +84,57 @@ export interface WorkshopRecipe {
 export const workshopRecipes: WorkshopRecipe[] = [
   {
     id: 'spring',
-    eyebrow: 'Physics',
-    name: 'Responsive spring',
-    description: 'A normalized damped spring tuned for quick, tactile interface motion.',
+    eyebrow: 'spring',
+    name: 'Damped spring',
+    description: 'Normalized spring with stiffness 140, damping 15, and mass 1.',
     build: () => spring({ stiffness: 140, damping: 15, mass: 1, duration: 1 }),
     code: `import { spring } from '@bluehexagons/easing';\n\nconst curve = spring({\n  stiffness: 140,\n  damping: 15,\n  mass: 1,\n  duration: 1,\n});`,
   },
   {
     id: 'bezier',
-    eyebrow: 'CSS familiar',
-    name: 'Swift Bézier',
-    description: 'A CSS-compatible cubic Bézier with a brisk launch and calm landing.',
+    eyebrow: 'cubicBezier',
+    name: 'Cubic Bézier',
+    description: 'Cubic Bézier with control points (0.22, 1) and (0.36, 1).',
     build: () => cubicBezier(0.22, 1, 0.36, 1),
     code: `import { cubicBezier } from '@bluehexagons/easing';\n\nconst curve = cubicBezier(0.22, 1, 0.36, 1);`,
   },
   {
     id: 'steps',
-    eyebrow: 'Discrete',
-    name: 'Six clean steps',
-    description: 'Quantize continuous time into a precise sequence of visible states.',
+    eyebrow: 'steps',
+    name: 'Six steps',
+    description: 'Six steps using end positioning.',
     build: () => steps(6, 'end'),
     code: `import { steps } from '@bluehexagons/easing';\n\nconst curve = steps(6, 'end');`,
   },
   {
     id: 'elastic',
-    eyebrow: 'Configurable',
-    name: 'Elastic landing',
-    description: 'A reusable elastic curve with explicit amplitude and period.',
+    eyebrow: 'createElasticOut',
+    name: 'Elastic out',
+    description: 'Elastic-out curve with amplitude 1.2 and period 0.42.',
     build: () => createElasticOut({ amplitude: 1.2, period: 0.42 }),
     code: `import { createElasticOut } from '@bluehexagons/easing';\n\nconst curve = createElasticOut({\n  amplitude: 1.2,\n  period: 0.42,\n});`,
   },
   {
     id: 'compose',
-    eyebrow: 'Combine',
-    name: 'Composed motion',
-    description: 'Run one curve through another to create a new motion vocabulary.',
+    eyebrow: 'compose',
+    name: 'Composed curve',
+    description: 'Applies cubicInOut, then sineOut.',
     build: () => compose(easings.sineOut, easings.cubicInOut),
     code: `import { compose, sineOut, cubicInOut } from '@bluehexagons/easing';\n\nconst curve = compose(sineOut, cubicInOut);`,
   },
   {
     id: 'mix',
-    eyebrow: 'Blend',
-    name: 'Balanced blend',
-    description: 'Interpolate between two easing outputs without touching their math.',
+    eyebrow: 'mix',
+    name: 'Mixed curve',
+    description: 'Mixes quadOut and backOut with weight 0.42.',
     build: () => mix(easings.quadOut, easings.backOut, 0.42),
     code: `import { mix, quadOut, backOut } from '@bluehexagons/easing';\n\nconst curve = mix(quadOut, backOut, 0.42);`,
   },
   {
     id: 'spline',
-    eyebrow: 'Draw with data',
+    eyebrow: 'monotoneSpline',
     name: 'Monotone spline',
-    description: 'A smooth, shape-preserving curve drawn through normalized stops.',
+    description: 'Monotone interpolation through five normalized points.',
     build: () =>
       monotoneSpline([
         [0, 0],
@@ -150,9 +147,9 @@ export const workshopRecipes: WorkshopRecipe[] = [
   },
   {
     id: 'alternate',
-    eyebrow: 'Sequence',
-    name: 'Alternating pulse',
-    description: 'Repeat a curve across time and reverse every other cycle.',
+    eyebrow: 'alternate',
+    name: 'Alternating curve',
+    description: 'Three sineInOut passes with every second pass reversed.',
     build: () => alternate(easings.sineInOut, 3),
     code: `import { alternate, sineInOut } from '@bluehexagons/easing';\n\nconst curve = alternate(sineInOut, 3);`,
   },
