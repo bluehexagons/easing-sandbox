@@ -1,9 +1,12 @@
 import {
   createElasticOut,
+  combineInOut,
+  compose,
   cubicBezier,
   hermite,
   mix,
   monotoneSpline,
+  piecewiseLinear,
   spring,
   steps,
   type EasingFunction,
@@ -42,6 +45,7 @@ export interface AdvancedRecipe {
   category: string;
   description: string;
   controls: readonly AdvancedControl[];
+  presets: ReadonlyArray<{ label: string; values: AdvancedValues }>;
   build: (values: AdvancedValues) => EasingFunction;
   code: (values: AdvancedValues) => string;
 }
@@ -105,6 +109,20 @@ export const advancedRecipes: readonly AdvancedRecipe[] = [
         suffix: ' s',
       },
     ],
+    presets: [
+      {
+        label: 'Snappy',
+        values: { stiffness: 240, damping: 24, mass: 0.8, velocity: 0, duration: 0.7 },
+      },
+      {
+        label: 'Bouncy',
+        values: { stiffness: 120, damping: 7, mass: 1, velocity: 0, duration: 1.4 },
+      },
+      {
+        label: 'Heavy',
+        values: { stiffness: 90, damping: 18, mass: 2.4, velocity: -1, duration: 2.2 },
+      },
+    ],
     build: (values) =>
       spring({
         stiffness: numeric(values, 'stiffness'),
@@ -149,6 +167,11 @@ const curve = spring({
         defaultValue: 0.42,
       },
     ],
+    presets: [
+      { label: 'Subtle', values: { amplitude: 1.05, period: 0.28 } },
+      { label: 'Rubber', values: { amplitude: 1.6, period: 0.48 } },
+      { label: 'Wild', values: { amplitude: 2.7, period: 0.72 } },
+    ],
     build: (values) =>
       createElasticOut({
         amplitude: numeric(values, 'amplitude'),
@@ -172,6 +195,11 @@ const curve = createElasticOut({
       { kind: 'range', key: 'y1', label: 'y1', min: -1, max: 2, step: 0.01, defaultValue: 1 },
       { kind: 'range', key: 'x2', label: 'x2', min: 0, max: 1, step: 0.01, defaultValue: 0.36 },
       { kind: 'range', key: 'y2', label: 'y2', min: -1, max: 2, step: 0.01, defaultValue: 1 },
+    ],
+    presets: [
+      { label: 'CSS ease', values: { x1: 0.25, y1: 0.1, x2: 0.25, y2: 1 } },
+      { label: 'Quick exit', values: { x1: 0.2, y1: 0.8, x2: 0.2, y2: 1 } },
+      { label: 'Overshoot', values: { x1: 0.34, y1: 1.4, x2: 0.64, y2: 1 } },
     ],
     build: (values) =>
       cubicBezier(
@@ -213,6 +241,11 @@ const curve = cubicBezier(
         defaultValue: 0,
       },
     ],
+    presets: [
+      { label: 'Smooth', values: { startSlope: 0, endSlope: 0 } },
+      { label: 'Fast start', values: { startSlope: 3.5, endSlope: 0 } },
+      { label: 'Anticipate', values: { startSlope: -1.4, endSlope: 0.4 } },
+    ],
     build: (values) =>
       hermite({
         startSlope: numeric(values, 'startSlope'),
@@ -224,6 +257,64 @@ const curve = hermite({
   startSlope: ${fixed(numeric(values, 'startSlope'))},
   endSlope: ${fixed(numeric(values, 'endSlope'))},
 });`,
+  },
+  {
+    id: 'piecewise',
+    api: 'piecewiseLinear(points)',
+    name: 'Drawn with points',
+    category: 'Data path',
+    description: 'Place independent stops to draw ramps, reversals, and holds.',
+    controls: [
+      {
+        kind: 'range',
+        key: 'p1',
+        label: 'Value at 20%',
+        min: -0.25,
+        max: 1.25,
+        step: 0.01,
+        defaultValue: 0.15,
+      },
+      {
+        kind: 'range',
+        key: 'p2',
+        label: 'Value at 50%',
+        min: -0.25,
+        max: 1.25,
+        step: 0.01,
+        defaultValue: 0.85,
+      },
+      {
+        kind: 'range',
+        key: 'p3',
+        label: 'Value at 80%',
+        min: -0.25,
+        max: 1.25,
+        step: 0.01,
+        defaultValue: 0.55,
+      },
+    ],
+    presets: [
+      { label: 'Zigzag', values: { p1: 0.8, p2: 0.2, p3: 1.1 } },
+      { label: 'Hold then go', values: { p1: 0, p2: 0.05, p3: 0.9 } },
+      { label: 'Overshoot', values: { p1: 0.15, p2: 1.18, p3: 0.92 } },
+    ],
+    build: (values) =>
+      piecewiseLinear([
+        [0, 0],
+        [0.2, numeric(values, 'p1')],
+        [0.5, numeric(values, 'p2')],
+        [0.8, numeric(values, 'p3')],
+        [1, 1],
+      ]),
+    code: (values) => `import { piecewiseLinear } from '@bluehexagons/easing';
+
+const curve = piecewiseLinear([
+  [0, 0],
+  [0.2, ${fixed(numeric(values, 'p1'))}],
+  [0.5, ${fixed(numeric(values, 'p2'))}],
+  [0.8, ${fixed(numeric(values, 'p3'))}],
+  [1, 1],
+]);`,
   },
   {
     id: 'spline',
@@ -250,6 +341,11 @@ const curve = hermite({
         step: 0.01,
         defaultValue: 0.78,
       },
+    ],
+    presets: [
+      { label: 'Late', values: { early: 0.02, late: 0.58 } },
+      { label: 'Balanced', values: { early: 0.24, late: 0.72 } },
+      { label: 'Front-loaded', values: { early: 0.42, late: 0.94 } },
     ],
     build: (values) =>
       monotoneSpline([
@@ -285,6 +381,11 @@ const curve = monotoneSpline([
           { label: 'Start', value: 'start' },
         ],
       },
+    ],
+    presets: [
+      { label: 'Four states', values: { count: 4, position: 'end' } },
+      { label: 'Clock ticks', values: { count: 12, position: 'end' } },
+      { label: 'Start owned', values: { count: 6, position: 'start' } },
     ],
     build: (values) => steps(numeric(values, 'count'), text(values, 'position') as StepPosition),
     code: (values) => `import { steps } from '@bluehexagons/easing';
@@ -322,6 +423,11 @@ const curve = steps(${numeric(values, 'count')}, '${text(values, 'position')}');
         defaultValue: 0.42,
       },
     ],
+    presets: [
+      { label: 'Soft landing', values: { first: 'cubicInOut', second: 'sineIn', weight: 0.35 } },
+      { label: 'Bounce blend', values: { first: 'cubicInOut', second: 'bounceOut', weight: 0.62 } },
+      { label: 'Sharp exit', values: { first: 'backOut', second: 'expoOut', weight: 0.72 } },
+    ],
     build: (values) => {
       const first = text(values, 'first') as EasingName;
       const second = text(values, 'second') as EasingName;
@@ -334,6 +440,88 @@ const curve = steps(${numeric(values, 'count')}, '${text(values, 'position')}');
       return `import { ${imports} } from '@bluehexagons/easing';
 
 const curve = mix(${first}, ${second}, ${fixed(numeric(values, 'weight'))});`;
+    },
+  },
+  {
+    id: 'compose',
+    api: 'compose(outer, inner)',
+    name: 'Curve pipeline',
+    category: 'Composition',
+    description: 'Send the output of one named curve through another.',
+    controls: [
+      {
+        kind: 'choice',
+        key: 'inner',
+        label: 'Runs first',
+        defaultValue: 'cubicInOut',
+        options: namedOptions,
+      },
+      {
+        kind: 'choice',
+        key: 'outer',
+        label: 'Runs second',
+        defaultValue: 'sineIn',
+        options: namedOptions,
+      },
+    ],
+    presets: [
+      { label: 'Soft launch', values: { inner: 'cubicInOut', outer: 'sineIn' } },
+      { label: 'Back bounce', values: { inner: 'backOut', outer: 'bounceOut' } },
+      { label: 'Hard finish', values: { inner: 'sineIn', outer: 'expoOut' } },
+    ],
+    build: (values) => {
+      const inner = text(values, 'inner') as EasingName;
+      const outer = text(values, 'outer') as EasingName;
+      return compose(easings[outer], easings[inner]);
+    },
+    code: (values) => {
+      const inner = text(values, 'inner');
+      const outer = text(values, 'outer');
+      const imports = [...new Set(['compose', outer, inner])].join(', ');
+      return `import { ${imports} } from '@bluehexagons/easing';
+
+const curve = compose(${outer}, ${inner});`;
+    },
+  },
+  {
+    id: 'combine',
+    api: 'combineInOut(start, end)',
+    name: 'Two-part curve',
+    category: 'Split timing',
+    description: 'Use a different easing function on each half of the timeline.',
+    controls: [
+      {
+        kind: 'choice',
+        key: 'start',
+        label: 'First half',
+        defaultValue: 'backOut',
+        options: namedOptions,
+      },
+      {
+        kind: 'choice',
+        key: 'end',
+        label: 'Second half',
+        defaultValue: 'bounceOut',
+        options: namedOptions,
+      },
+    ],
+    presets: [
+      { label: 'Rise and settle', values: { start: 'expoOut', end: 'bounceOut' } },
+      { label: 'Pull and release', values: { start: 'backOut', end: 'cubicInOut' } },
+      { label: 'Soft halves', values: { start: 'sineIn', end: 'cubicInOut' } },
+    ],
+    build: (values) => {
+      const start = text(values, 'start') as EasingName;
+      const end = text(values, 'end') as EasingName;
+      return combineInOut(easings[start], easings[end]);
+    },
+    code: (values) => {
+      const start = text(values, 'start');
+      const end = text(values, 'end');
+      const imports = [...new Set(['combineInOut', start, end])].join(', ');
+      return `import { ${imports} } from '@bluehexagons/easing';
+
+const curve = combineInOut(${start}, ${end});`;
     },
   },
 ];

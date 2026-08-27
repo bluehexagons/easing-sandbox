@@ -16,7 +16,7 @@ A TypeScript browser interface for [`@bluehexagons/easing`](https://github.com/b
 - Switchable curve, movement, scale, rotation, and color visualizations across presets, recipes, and composition tools
 - A persistent active-curve player with mobile preview plus compact and expanded modes
 - Live scrubbing, curve plotting, output values, copyable TypeScript, and an editable function sandbox
-- A live advanced-constructor workbench for springs, elastic responses, cubic Béziers, Hermite slopes, monotone splines, steps, and weighted blends
+- A live advanced-constructor workbench with presets, randomized inputs, and draggable points for springs, elastic responses, Béziers, Hermite curves, piecewise paths, splines, steps, blends, pipelines, and split curves
 - Composition helpers including `compose`, `mix`, `clamp`, `reverse`, `repeat`, `alternate`, and `invert`, with one-click application to the active curve
 - Copyable TypeScript examples for every selection
 - Search, curve-family filters, responsive layouts, and reduced-motion support

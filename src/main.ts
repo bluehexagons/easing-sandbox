@@ -159,14 +159,22 @@ app.innerHTML = `
             <span id="advanced-category">Physics</span>
           </div>
           <p id="advanced-description"></p>
+          <div class="advanced-presets">
+            <span>Try</span>
+            <div id="advanced-presets"></div>
+            <button id="advanced-randomize" type="button">Shuffle <span aria-hidden="true">↻</span></button>
+          </div>
+          <div class="advanced-formation" id="advanced-formation" aria-live="polite"></div>
           <div class="advanced-visuals">
             <div class="advanced-preview" id="advanced-preview"></div>
             <div class="advanced-curve-readout">
-              <span>Curve shape</span>
-              <svg viewBox="0 0 120 64" role="img" aria-label="Current advanced curve shape">
+              <span><span>Curve shape</span><small id="advanced-drag-hint"></small></span>
+              <svg id="advanced-shape-editor" viewBox="0 0 120 64" role="img" aria-label="Current advanced curve shape">
                 <path class="mini-grid" d="M8 56H112M8 56V8" />
                 <path class="mini-reference" d="M8 56L112 8" />
                 <path class="mini-curve" id="advanced-static-path" />
+                <g class="advanced-handle-lines" id="advanced-handle-lines"></g>
+                <g class="advanced-handles" id="advanced-handles"></g>
               </svg>
               <span aria-hidden="true"><span>0</span><span>1</span></span>
             </div>

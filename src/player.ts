@@ -73,6 +73,11 @@ const miniPath = (fn: EasingFunction): string => {
   return points.join('');
 };
 
+const graphPoint = (time: number, value: number): { x: number; y: number } => ({
+  x: 8 + Math.max(0, Math.min(1, time)) * 104,
+  y: 56 - Math.max(-0.2, Math.min(1.2, value)) * 48,
+});
+
 const previewMarkup = (curve: CurveDefinition): string => `
   <span class="preview-visualization" data-preview-id="${curve.id}" aria-hidden="true">
     <svg class="preview-scene preview-curve-scene" data-preview-scene="curve" viewBox="0 0 120 64">
@@ -132,11 +137,18 @@ export const initializePlayground = (): void => {
   const advancedName = select<HTMLElement>('#advanced-name');
   const advancedCategory = select<HTMLElement>('#advanced-category');
   const advancedDescription = select<HTMLElement>('#advanced-description');
+  const advancedPresets = select<HTMLElement>('#advanced-presets');
+  const advancedFormation = select<HTMLElement>('#advanced-formation');
   const advancedSamples = select<HTMLElement>('#advanced-samples');
   const advancedStaticPath = select<SVGPathElement>('#advanced-static-path');
+  const advancedShapeEditor = select<SVGSVGElement>('#advanced-shape-editor');
+  const advancedHandleLines = select<SVGGElement>('#advanced-handle-lines');
+  const advancedHandles = select<SVGGElement>('#advanced-handles');
+  const advancedDragHint = select<HTMLElement>('#advanced-drag-hint');
   const advancedCode = select<HTMLElement>('#advanced-code');
   const advancedUseButton = select<HTMLButtonElement>('#advanced-use');
   const advancedResetButton = select<HTMLButtonElement>('#advanced-reset');
+  const advancedRandomizeButton = select<HTMLButtonElement>('#advanced-randomize');
   const advancedCopyButton = select<HTMLButtonElement>('#advanced-copy');
   const advancedPlayButton = select<HTMLButtonElement>('.advanced-play');
   const emptyState = select<HTMLElement>('#empty-state');
@@ -695,6 +707,18 @@ export const initializePlayground = (): void => {
           </button>`,
       )
       .join('');
+    const activeButton = advancedRecipesElement.querySelector<HTMLElement>('.active');
+    if (activeButton && advancedRecipesElement.scrollWidth > advancedRecipesElement.clientWidth) {
+      requestAnimationFrame(() => {
+        const railBounds = advancedRecipesElement.getBoundingClientRect();
+        const buttonBounds = activeButton.getBoundingClientRect();
+        const buttonLeft = buttonBounds.left - railBounds.left + advancedRecipesElement.scrollLeft;
+        advancedRecipesElement.scrollTo({
+          left: buttonLeft - (advancedRecipesElement.clientWidth - activeButton.offsetWidth) / 2,
+          behavior: 'smooth',
+        });
+      });
+    }
   };
 
   const renderAdvancedControls = (): void => {
@@ -726,6 +750,150 @@ export const initializePlayground = (): void => {
       .join('');
   };
 
+  const syncAdvancedControls = (): void => {
+    for (const control of activeAdvancedRecipe.controls) {
+      const input = advancedControls.querySelector<HTMLInputElement | HTMLSelectElement>(
+        `[data-advanced-input="${control.key}"]`,
+      );
+      if (!input) continue;
+      const value = advancedValues[control.key] ?? control.defaultValue;
+      input.value = String(value);
+      if (control.kind === 'range') {
+        input.style.setProperty(
+          '--range-progress',
+          `${((Number(value) - control.min) / (control.max - control.min)) * 100}%`,
+        );
+        const output = advancedControls.querySelector<HTMLOutputElement>(
+          `[data-advanced-output="${control.key}"]`,
+        );
+        if (output) output.value = `${value}${control.suffix ?? ''}`;
+      }
+    }
+  };
+
+  const renderAdvancedPresets = (): void => {
+    advancedPresets.innerHTML = activeAdvancedRecipe.presets
+      .map(
+        (preset, index) =>
+          `<button type="button" data-advanced-preset="${index}">${escapeHtml(preset.label)}</button>`,
+      )
+      .join('');
+  };
+
+  const formationNode = (value: string, label?: string): string =>
+    `<span class="formation-node"><code>${escapeHtml(value)}</code>${label ? `<small>${escapeHtml(label)}</small>` : ''}</span>`;
+  const formationArrow = (label = 'then'): string =>
+    `<span class="formation-arrow"><small>${escapeHtml(label)}</small><span aria-hidden="true">→</span></span>`;
+
+  const renderAdvancedFormation = (): void => {
+    const value = (key: string): string => String(advancedValues[key] ?? '');
+    switch (activeAdvancedRecipe.id) {
+      case 'spring':
+        advancedFormation.innerHTML = `${formationNode('mass + stiffness', 'system')}${formationArrow('damped by')}${formationNode(value('damping'), 'damping')}${formationArrow()}${formationNode('response')}`;
+        break;
+      case 'elastic':
+        advancedFormation.innerHTML = `${formationNode(value('amplitude'), 'amplitude')}${formationArrow('+')}${formationNode(value('period'), 'period')}${formationArrow()}${formationNode('oscillation')}`;
+        break;
+      case 'bezier':
+        advancedFormation.innerHTML = `${formationNode(`P1 (${value('x1')}, ${value('y1')})`)}${formationArrow('+')}${formationNode(`P2 (${value('x2')}, ${value('y2')})`)}${formationArrow()}${formationNode('timing curve')}`;
+        break;
+      case 'hermite':
+        advancedFormation.innerHTML = `${formationNode(value('startSlope'), 'start slope')}${formationArrow('+')}${formationNode(value('endSlope'), 'end slope')}${formationArrow()}${formationNode('cubic')}`;
+        break;
+      case 'piecewise':
+        advancedFormation.innerHTML = `${formationNode('P0')}${formationArrow()}${formationNode('P1')}${formationArrow()}${formationNode('P2')}${formationArrow()}${formationNode('P3')}${formationArrow()}${formationNode('P4')}`;
+        break;
+      case 'spline':
+        advancedFormation.innerHTML = `${formationNode('4 keyframes')}${formationArrow('interpolate')}${formationNode('monotone spline', 'no overshoot')}`;
+        break;
+      case 'steps':
+        advancedFormation.innerHTML = `${formationNode(value('count'), 'states')}${formationArrow(value('position'))}${formationNode('quantized time')}`;
+        break;
+      case 'mix':
+        advancedFormation.innerHTML = `${formationNode(value('first'), `${(1 - Number(value('weight'))).toFixed(2)} weight`)}${formationArrow('blend')}${formationNode(value('second'), `${Number(value('weight')).toFixed(2)} weight`)}`;
+        break;
+      case 'compose':
+        advancedFormation.innerHTML = `${formationNode(value('inner'), 'input')}${formationArrow('feeds')}${formationNode(value('outer'), 'output')}`;
+        break;
+      case 'combine':
+        advancedFormation.innerHTML = `${formationNode(value('start'), '0 → 0.5')}${formationArrow('switch')}${formationNode(value('end'), '0.5 → 1')}`;
+        break;
+      default:
+        advancedFormation.replaceChildren();
+    }
+  };
+
+  const renderAdvancedHandles = (): void => {
+    const handle = (time: number, value: number, label: string, attributes: string): string => {
+      const point = graphPoint(time, value);
+      return `<g class="advanced-handle" transform="translate(${point.x.toFixed(2)} ${point.y.toFixed(2)})" data-advanced-handle ${attributes}>
+        <circle class="advanced-handle-hit" r="8" />
+        <circle class="advanced-handle-point" r="3.2" />
+        <text x="5" y="-5">${escapeHtml(label)}</text>
+      </g>`;
+    };
+    const line = (fromTime: number, fromValue: number, toTime: number, toValue: number): string => {
+      const from = graphPoint(fromTime, fromValue);
+      const to = graphPoint(toTime, toValue);
+      return `<line x1="${from.x.toFixed(2)}" y1="${from.y.toFixed(2)}" x2="${to.x.toFixed(2)}" y2="${to.y.toFixed(2)}" />`;
+    };
+    const number = (key: string): number => Number(advancedValues[key]);
+    let handles = '';
+    let lines = '';
+    switch (activeAdvancedRecipe.id) {
+      case 'bezier':
+        handles =
+          handle(
+            number('x1'),
+            number('y1'),
+            'P1',
+            'data-handle-kind="bezier" data-x-key="x1" data-y-key="y1"',
+          ) +
+          handle(
+            number('x2'),
+            number('y2'),
+            'P2',
+            'data-handle-kind="bezier" data-x-key="x2" data-y-key="y2"',
+          );
+        lines = line(0, 0, number('x1'), number('y1')) + line(1, 1, number('x2'), number('y2'));
+        break;
+      case 'hermite': {
+        const startValue = number('startSlope') * 0.2;
+        const endValue = 1 - number('endSlope') * 0.2;
+        handles =
+          handle(
+            0.2,
+            startValue,
+            'S',
+            'data-handle-kind="slope" data-y-key="startSlope" data-side="start"',
+          ) +
+          handle(
+            0.8,
+            endValue,
+            'E',
+            'data-handle-kind="slope" data-y-key="endSlope" data-side="end"',
+          );
+        lines = line(0, 0, 0.2, startValue) + line(1, 1, 0.8, endValue);
+        break;
+      }
+      case 'piecewise':
+        handles =
+          handle(0.2, number('p1'), 'P1', 'data-handle-kind="value" data-y-key="p1"') +
+          handle(0.5, number('p2'), 'P2', 'data-handle-kind="value" data-y-key="p2"') +
+          handle(0.8, number('p3'), 'P3', 'data-handle-kind="value" data-y-key="p3"');
+        break;
+      case 'spline':
+        handles =
+          handle(0.25, number('early'), 'P1', 'data-handle-kind="value" data-y-key="early"') +
+          handle(0.65, number('late'), 'P2', 'data-handle-kind="value" data-y-key="late"');
+        break;
+    }
+    advancedHandleLines.innerHTML = lines;
+    advancedHandles.innerHTML = handles;
+    advancedDragHint.textContent = handles ? 'Drag points' : '';
+    advancedShapeEditor.classList.toggle('draggable', Boolean(handles));
+  };
+
   const rebuildAdvancedCurve = (): void => {
     advancedCurve = buildAdvancedCurve();
     playerDefinitions.set(advancedCurve.id, advancedCurve);
@@ -733,12 +901,14 @@ export const initializePlayground = (): void => {
     advancedName.textContent = activeAdvancedRecipe.name;
     advancedCategory.textContent = activeAdvancedRecipe.category;
     advancedDescription.textContent = activeAdvancedRecipe.description;
+    renderAdvancedFormation();
     advancedCode.textContent = advancedCurve.code;
     advancedPlayButton.dataset['playerName'] = activeAdvancedRecipe.name;
     advancedPreview
       .querySelector<SVGPathElement>('.mini-curve')
       ?.setAttribute('d', miniPath(advancedCurve.fn));
     advancedStaticPath.setAttribute('d', miniPath(advancedCurve.fn));
+    renderAdvancedHandles();
     advancedSamples.innerHTML = [0.25, 0.5, 0.75]
       .map(
         (time) =>
@@ -759,6 +929,7 @@ export const initializePlayground = (): void => {
   const renderAdvanced = (): void => {
     renderAdvancedRecipeTabs();
     renderAdvancedControls();
+    renderAdvancedPresets();
     advancedPreview.innerHTML = previewMarkup(advancedCurve);
     rebuildAdvancedCurve();
     observeAutoplayPreviews();
@@ -916,8 +1087,133 @@ export const initializePlayground = (): void => {
     advancedValues = defaultAdvancedValues(recipe);
     renderAdvancedRecipeTabs();
     renderAdvancedControls();
+    renderAdvancedPresets();
     rebuildAdvancedCurve();
   });
+
+  const animateAdvancedChange = (): void => {
+    advancedWorkbench.classList.remove('changed');
+    requestAnimationFrame(() => advancedWorkbench.classList.add('changed'));
+    window.setTimeout(() => advancedWorkbench.classList.remove('changed'), 420);
+  };
+
+  advancedPresets.addEventListener('click', (event) => {
+    const button = (event.target as Element).closest<HTMLButtonElement>('[data-advanced-preset]');
+    if (!button) return;
+    const preset = activeAdvancedRecipe.presets[Number(button.dataset['advancedPreset'])];
+    if (!preset) return;
+    advancedValues = {
+      ...defaultAdvancedValues(activeAdvancedRecipe),
+      ...preset.values,
+    };
+    syncAdvancedControls();
+    rebuildAdvancedCurve();
+    animateAdvancedChange();
+  });
+
+  advancedRandomizeButton.addEventListener('click', () => {
+    const randomizedValues: AdvancedValues = Object.fromEntries(
+      activeAdvancedRecipe.controls.map((control) => {
+        if (control.kind === 'choice') {
+          const option = control.options[Math.floor(Math.random() * control.options.length)];
+          return [control.key, option?.value ?? control.defaultValue];
+        }
+        const steps = Math.round((control.max - control.min) / control.step);
+        const value = control.min + Math.floor(Math.random() * (steps + 1)) * control.step;
+        return [control.key, Number(value.toFixed(6))];
+      }),
+    );
+    const unchanged = activeAdvancedRecipe.controls.every(
+      (control) => randomizedValues[control.key] === advancedValues[control.key],
+    );
+    const firstControl = activeAdvancedRecipe.controls[0];
+    if (unchanged && firstControl) {
+      if (firstControl.kind === 'choice') {
+        const currentIndex = firstControl.options.findIndex(
+          (option) => option.value === randomizedValues[firstControl.key],
+        );
+        randomizedValues[firstControl.key] =
+          firstControl.options[(currentIndex + 1) % firstControl.options.length]?.value ??
+          firstControl.defaultValue;
+      } else {
+        const current = Number(randomizedValues[firstControl.key]);
+        randomizedValues[firstControl.key] =
+          current + firstControl.step <= firstControl.max
+            ? current + firstControl.step
+            : firstControl.min;
+      }
+    }
+    advancedValues = randomizedValues;
+    syncAdvancedControls();
+    rebuildAdvancedCurve();
+    animateAdvancedChange();
+  });
+
+  const setAdvancedRangeValue = (key: string, value: number): void => {
+    const control = activeAdvancedRecipe.controls.find(
+      (candidate) => candidate.kind === 'range' && candidate.key === key,
+    );
+    if (!control || control.kind !== 'range') return;
+    const clamped = Math.max(control.min, Math.min(control.max, value));
+    const stepped = control.min + Math.round((clamped - control.min) / control.step) * control.step;
+    advancedValues[key] = Number(stepped.toFixed(6));
+  };
+
+  let draggedAdvancedHandle:
+    | {
+        pointerId: number;
+        kind: string;
+        xKey?: string;
+        yKey?: string;
+        side?: string;
+      }
+    | undefined;
+
+  advancedShapeEditor.addEventListener('pointerdown', (event) => {
+    const handle = (event.target as Element).closest<SVGGElement>('[data-advanced-handle]');
+    if (!handle) return;
+    event.preventDefault();
+    draggedAdvancedHandle = {
+      pointerId: event.pointerId,
+      kind: handle.dataset['handleKind'] ?? 'value',
+      xKey: handle.dataset['xKey'],
+      yKey: handle.dataset['yKey'],
+      side: handle.dataset['side'],
+    };
+    advancedShapeEditor.setPointerCapture(event.pointerId);
+    advancedWorkbench.classList.add('dragging');
+  });
+
+  advancedShapeEditor.addEventListener('pointermove', (event) => {
+    if (!draggedAdvancedHandle || draggedAdvancedHandle.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    const bounds = advancedShapeEditor.getBoundingClientRect();
+    const graphX = ((event.clientX - bounds.left) / bounds.width) * 120;
+    const graphY = ((event.clientY - bounds.top) / bounds.height) * 64;
+    const time = (graphX - 8) / 104;
+    const value = (56 - graphY) / 48;
+    if (draggedAdvancedHandle.kind === 'bezier' && draggedAdvancedHandle.xKey) {
+      setAdvancedRangeValue(draggedAdvancedHandle.xKey, time);
+    }
+    if (draggedAdvancedHandle.kind === 'slope' && draggedAdvancedHandle.yKey) {
+      setAdvancedRangeValue(
+        draggedAdvancedHandle.yKey,
+        draggedAdvancedHandle.side === 'start' ? value / 0.2 : (1 - value) / 0.2,
+      );
+    } else if (draggedAdvancedHandle.yKey) {
+      setAdvancedRangeValue(draggedAdvancedHandle.yKey, value);
+    }
+    syncAdvancedControls();
+    rebuildAdvancedCurve();
+  });
+
+  const finishAdvancedDrag = (event: PointerEvent): void => {
+    if (!draggedAdvancedHandle || draggedAdvancedHandle.pointerId !== event.pointerId) return;
+    draggedAdvancedHandle = undefined;
+    advancedWorkbench.classList.remove('dragging');
+  };
+  advancedShapeEditor.addEventListener('pointerup', finishAdvancedDrag);
+  advancedShapeEditor.addEventListener('pointercancel', finishAdvancedDrag);
 
   advancedControls.addEventListener('input', (event) => {
     const input = (event.target as Element).closest<HTMLInputElement | HTMLSelectElement>(
@@ -946,6 +1242,7 @@ export const initializePlayground = (): void => {
     advancedValues = defaultAdvancedValues(activeAdvancedRecipe);
     renderAdvancedControls();
     rebuildAdvancedCurve();
+    animateAdvancedChange();
   });
 
   advancedUseButton.addEventListener('click', () => selectCurve(advancedCurve));
