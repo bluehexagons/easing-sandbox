@@ -15,13 +15,13 @@
     "check": "npm run typecheck && npm run lint && npm run format:check && vite build"
   },
   "dependencies": {
-    "@bluehexagons/easing": "git+https://github.com/bluehexagons/easing.git#a4b580ca98d9a8eda528e1ca642fa8822b264e75"
+    "@bluehexagons/easing": "https://codeload.github.com/bluehexagons/easing/tar.gz/bd78d32d9bbbe0064cc9fb5680705ad8811672b9"
   },
   "devDependencies": {
-    "oxfmt": "^0.65.0",
-    "oxlint": "^1.80.0",
+    "oxfmt": "^0.70.0",
+    "oxlint": "^1.85.0",
     "typescript": "^7.0.2",
-    "vite": "^8.2.2"
+    "vite": "^8.3.1"
   },
   "engines": {
     "node": ">=24.0.0"

@@ -104,6 +104,77 @@ const previewMarkup = (curve: CurveDefinition): string => `
     </span>
   </span>`;
 
+const updatePreview = (
+  curve: CurveDefinition,
+  time: number,
+  mirrored = false,
+  backwards = false,
+): void => {
+  const value = finiteValue(curve.fn, time);
+  const visualValue = mirrored ? 1 - value : value;
+  const graphValue = Math.max(-0.2, Math.min(1.2, value));
+  const position = Math.max(0, Math.min(1, visualValue));
+  const x = 8 + time * 104;
+  const y = 56 - graphValue * 48;
+  document.querySelectorAll<HTMLElement>(`[data-preview-id="${curve.id}"]`).forEach((preview) => {
+    preview.dataset['direction'] = backwards ? 'reverse' : 'forward';
+    preview.style.setProperty('--preview-position', `${position * 100}%`);
+    preview.style.setProperty(
+      '--preview-scale',
+      String(Math.max(0.25, Math.min(1.5, 0.4 + visualValue))),
+    );
+    preview.style.setProperty('--preview-rotation', `${visualValue * 300}deg`);
+    const colorMix = Math.max(0, Math.min(1, visualValue));
+    const red = Math.round(255 + (50 - 255) * colorMix);
+    const green = Math.round(101 + (93 - 101) * colorMix);
+    const blue = Math.round(78 + (255 - 78) * colorMix);
+    preview.style.setProperty('--preview-color', `rgb(${red} ${green} ${blue})`);
+    const mover = preview.querySelector<HTMLElement>('.preview-mover');
+    if (mover) mover.textContent = backwards ? '←' : '→';
+    const rotateObject = preview.querySelector<HTMLElement>('.preview-rotate-object');
+    if (rotateObject) rotateObject.textContent = backwards ? '↙' : '↗';
+    const guide = preview.querySelector<SVGLineElement>('[data-preview-guide]');
+    guide?.setAttribute('x1', x.toFixed(2));
+    guide?.setAttribute('x2', x.toFixed(2));
+    guide?.setAttribute('y1', y.toFixed(2));
+    preview.querySelectorAll<SVGCircleElement>('[data-preview-marker]').forEach((marker) => {
+      marker.setAttribute('cx', x.toFixed(2));
+      marker.setAttribute('cy', y.toFixed(2));
+    });
+  });
+};
+
+const formationNode = (value: string, label?: string): string =>
+  `<span class="formation-node"><code>${escapeHtml(value)}</code>${label ? `<small>${escapeHtml(label)}</small>` : ''}</span>`;
+const formationArrow = (label = 'then'): string =>
+  `<span class="formation-arrow"><small>${escapeHtml(label)}</small><span aria-hidden="true">→</span></span>`;
+const advancedValueText = (values: AdvancedValues, key: string): string =>
+  String(values[key] ?? '');
+const advancedValueNumber = (values: AdvancedValues, key: string): number => Number(values[key]);
+const advancedHandleMarkup = (
+  time: number,
+  value: number,
+  label: string,
+  attributes: string,
+): string => {
+  const point = graphPoint(time, value);
+  return `<g class="advanced-handle" transform="translate(${point.x.toFixed(2)} ${point.y.toFixed(2)})" data-advanced-handle ${attributes}>
+    <circle class="advanced-handle-hit" r="8" />
+    <circle class="advanced-handle-point" r="3.2" />
+    <text x="5" y="-5">${escapeHtml(label)}</text>
+  </g>`;
+};
+const advancedLineMarkup = (
+  fromTime: number,
+  fromValue: number,
+  toTime: number,
+  toValue: number,
+): string => {
+  const from = graphPoint(fromTime, fromValue);
+  const to = graphPoint(toTime, toValue);
+  return `<line x1="${from.x.toFixed(2)}" y1="${from.y.toFixed(2)}" x2="${to.x.toFixed(2)}" y2="${to.y.toFixed(2)}" />`;
+};
+
 export const initializePlayground = (): void => {
   const curveDescription = select<HTMLElement>('#curve-description');
   const codeOutput = select<HTMLElement>('#code-output');
@@ -261,46 +332,6 @@ export const initializePlayground = (): void => {
       .join('');
     graphPath.setAttribute('d', path);
     graphShadow.setAttribute('d', path);
-  };
-
-  const updatePreview = (
-    curve: CurveDefinition,
-    time: number,
-    mirrored = false,
-    backwards = false,
-  ): void => {
-    const value = finiteValue(curve.fn, time);
-    const visualValue = mirrored ? 1 - value : value;
-    const graphValue = Math.max(-0.2, Math.min(1.2, value));
-    const position = Math.max(0, Math.min(1, visualValue));
-    const x = 8 + time * 104;
-    const y = 56 - graphValue * 48;
-    document.querySelectorAll<HTMLElement>(`[data-preview-id="${curve.id}"]`).forEach((preview) => {
-      preview.dataset['direction'] = backwards ? 'reverse' : 'forward';
-      preview.style.setProperty('--preview-position', `${position * 100}%`);
-      preview.style.setProperty(
-        '--preview-scale',
-        String(Math.max(0.25, Math.min(1.5, 0.4 + visualValue))),
-      );
-      preview.style.setProperty('--preview-rotation', `${visualValue * 300}deg`);
-      const colorMix = Math.max(0, Math.min(1, visualValue));
-      const red = Math.round(255 + (50 - 255) * colorMix);
-      const green = Math.round(101 + (93 - 101) * colorMix);
-      const blue = Math.round(78 + (255 - 78) * colorMix);
-      preview.style.setProperty('--preview-color', `rgb(${red} ${green} ${blue})`);
-      const mover = preview.querySelector<HTMLElement>('.preview-mover');
-      if (mover) mover.textContent = backwards ? '←' : '→';
-      const rotateObject = preview.querySelector<HTMLElement>('.preview-rotate-object');
-      if (rotateObject) rotateObject.textContent = backwards ? '↙' : '↗';
-      const guide = preview.querySelector<SVGLineElement>('[data-preview-guide]');
-      guide?.setAttribute('x1', x.toFixed(2));
-      guide?.setAttribute('x2', x.toFixed(2));
-      guide?.setAttribute('y1', y.toFixed(2));
-      preview.querySelectorAll<SVGCircleElement>('[data-preview-marker]').forEach((marker) => {
-        marker.setAttribute('cx', x.toFixed(2));
-        marker.setAttribute('cy', y.toFixed(2));
-      });
-    });
   };
 
   const updateActiveCompanion = (): void => {
@@ -780,25 +811,19 @@ export const initializePlayground = (): void => {
       .join('');
   };
 
-  const formationNode = (value: string, label?: string): string =>
-    `<span class="formation-node"><code>${escapeHtml(value)}</code>${label ? `<small>${escapeHtml(label)}</small>` : ''}</span>`;
-  const formationArrow = (label = 'then'): string =>
-    `<span class="formation-arrow"><small>${escapeHtml(label)}</small><span aria-hidden="true">→</span></span>`;
-
   const renderAdvancedFormation = (): void => {
-    const value = (key: string): string => String(advancedValues[key] ?? '');
     switch (activeAdvancedRecipe.id) {
       case 'spring':
-        advancedFormation.innerHTML = `${formationNode('mass + stiffness', 'system')}${formationArrow('damped by')}${formationNode(value('damping'), 'damping')}${formationArrow()}${formationNode('response')}`;
+        advancedFormation.innerHTML = `${formationNode('mass + stiffness', 'system')}${formationArrow('damped by')}${formationNode(advancedValueText(advancedValues, 'damping'), 'damping')}${formationArrow()}${formationNode('response')}`;
         break;
       case 'elastic':
-        advancedFormation.innerHTML = `${formationNode(value('amplitude'), 'amplitude')}${formationArrow('+')}${formationNode(value('period'), 'period')}${formationArrow()}${formationNode('oscillation')}`;
+        advancedFormation.innerHTML = `${formationNode(advancedValueText(advancedValues, 'amplitude'), 'amplitude')}${formationArrow('+')}${formationNode(advancedValueText(advancedValues, 'period'), 'period')}${formationArrow()}${formationNode('oscillation')}`;
         break;
       case 'bezier':
-        advancedFormation.innerHTML = `${formationNode(`P1 (${value('x1')}, ${value('y1')})`)}${formationArrow('+')}${formationNode(`P2 (${value('x2')}, ${value('y2')})`)}${formationArrow()}${formationNode('timing curve')}`;
+        advancedFormation.innerHTML = `${formationNode(`P1 (${advancedValueText(advancedValues, 'x1')}, ${advancedValueText(advancedValues, 'y1')})`)}${formationArrow('+')}${formationNode(`P2 (${advancedValueText(advancedValues, 'x2')}, ${advancedValueText(advancedValues, 'y2')})`)}${formationArrow()}${formationNode('timing curve')}`;
         break;
       case 'hermite':
-        advancedFormation.innerHTML = `${formationNode(value('startSlope'), 'start slope')}${formationArrow('+')}${formationNode(value('endSlope'), 'end slope')}${formationArrow()}${formationNode('cubic')}`;
+        advancedFormation.innerHTML = `${formationNode(advancedValueText(advancedValues, 'startSlope'), 'start slope')}${formationArrow('+')}${formationNode(advancedValueText(advancedValues, 'endSlope'), 'end slope')}${formationArrow()}${formationNode('cubic')}`;
         break;
       case 'piecewise':
         advancedFormation.innerHTML = `${formationNode('P0')}${formationArrow()}${formationNode('P1')}${formationArrow()}${formationNode('P2')}${formationArrow()}${formationNode('P3')}${formationArrow()}${formationNode('P4')}`;
@@ -807,16 +832,16 @@ export const initializePlayground = (): void => {
         advancedFormation.innerHTML = `${formationNode('4 keyframes')}${formationArrow('interpolate')}${formationNode('monotone spline', 'no overshoot')}`;
         break;
       case 'steps':
-        advancedFormation.innerHTML = `${formationNode(value('count'), 'states')}${formationArrow(value('position'))}${formationNode('quantized time')}`;
+        advancedFormation.innerHTML = `${formationNode(advancedValueText(advancedValues, 'count'), 'states')}${formationArrow(advancedValueText(advancedValues, 'position'))}${formationNode('quantized time')}`;
         break;
       case 'mix':
-        advancedFormation.innerHTML = `${formationNode(value('first'), `${(1 - Number(value('weight'))).toFixed(2)} weight`)}${formationArrow('blend')}${formationNode(value('second'), `${Number(value('weight')).toFixed(2)} weight`)}`;
+        advancedFormation.innerHTML = `${formationNode(advancedValueText(advancedValues, 'first'), `${(1 - advancedValueNumber(advancedValues, 'weight')).toFixed(2)} weight`)}${formationArrow('blend')}${formationNode(advancedValueText(advancedValues, 'second'), `${advancedValueNumber(advancedValues, 'weight').toFixed(2)} weight`)}`;
         break;
       case 'compose':
-        advancedFormation.innerHTML = `${formationNode(value('inner'), 'input')}${formationArrow('feeds')}${formationNode(value('outer'), 'output')}`;
+        advancedFormation.innerHTML = `${formationNode(advancedValueText(advancedValues, 'inner'), 'input')}${formationArrow('feeds')}${formationNode(advancedValueText(advancedValues, 'outer'), 'output')}`;
         break;
       case 'combine':
-        advancedFormation.innerHTML = `${formationNode(value('start'), '0 → 0.5')}${formationArrow('switch')}${formationNode(value('end'), '0.5 → 1')}`;
+        advancedFormation.innerHTML = `${formationNode(advancedValueText(advancedValues, 'start'), '0 → 0.5')}${formationArrow('switch')}${formationNode(advancedValueText(advancedValues, 'end'), '0.5 → 1')}`;
         break;
       default:
         advancedFormation.replaceChildren();
@@ -824,68 +849,91 @@ export const initializePlayground = (): void => {
   };
 
   const renderAdvancedHandles = (): void => {
-    const handle = (time: number, value: number, label: string, attributes: string): string => {
-      const point = graphPoint(time, value);
-      return `<g class="advanced-handle" transform="translate(${point.x.toFixed(2)} ${point.y.toFixed(2)})" data-advanced-handle ${attributes}>
-        <circle class="advanced-handle-hit" r="8" />
-        <circle class="advanced-handle-point" r="3.2" />
-        <text x="5" y="-5">${escapeHtml(label)}</text>
-      </g>`;
-    };
-    const line = (fromTime: number, fromValue: number, toTime: number, toValue: number): string => {
-      const from = graphPoint(fromTime, fromValue);
-      const to = graphPoint(toTime, toValue);
-      return `<line x1="${from.x.toFixed(2)}" y1="${from.y.toFixed(2)}" x2="${to.x.toFixed(2)}" y2="${to.y.toFixed(2)}" />`;
-    };
-    const number = (key: string): number => Number(advancedValues[key]);
     let handles = '';
     let lines = '';
     switch (activeAdvancedRecipe.id) {
       case 'bezier':
         handles =
-          handle(
-            number('x1'),
-            number('y1'),
+          advancedHandleMarkup(
+            advancedValueNumber(advancedValues, 'x1'),
+            advancedValueNumber(advancedValues, 'y1'),
             'P1',
             'data-handle-kind="bezier" data-x-key="x1" data-y-key="y1"',
           ) +
-          handle(
-            number('x2'),
-            number('y2'),
+          advancedHandleMarkup(
+            advancedValueNumber(advancedValues, 'x2'),
+            advancedValueNumber(advancedValues, 'y2'),
             'P2',
             'data-handle-kind="bezier" data-x-key="x2" data-y-key="y2"',
           );
-        lines = line(0, 0, number('x1'), number('y1')) + line(1, 1, number('x2'), number('y2'));
+        lines =
+          advancedLineMarkup(
+            0,
+            0,
+            advancedValueNumber(advancedValues, 'x1'),
+            advancedValueNumber(advancedValues, 'y1'),
+          ) +
+          advancedLineMarkup(
+            1,
+            1,
+            advancedValueNumber(advancedValues, 'x2'),
+            advancedValueNumber(advancedValues, 'y2'),
+          );
         break;
       case 'hermite': {
-        const startValue = number('startSlope') * 0.2;
-        const endValue = 1 - number('endSlope') * 0.2;
+        const startValue = advancedValueNumber(advancedValues, 'startSlope') * 0.2;
+        const endValue = 1 - advancedValueNumber(advancedValues, 'endSlope') * 0.2;
         handles =
-          handle(
+          advancedHandleMarkup(
             0.2,
             startValue,
             'S',
             'data-handle-kind="slope" data-y-key="startSlope" data-side="start"',
           ) +
-          handle(
+          advancedHandleMarkup(
             0.8,
             endValue,
             'E',
             'data-handle-kind="slope" data-y-key="endSlope" data-side="end"',
           );
-        lines = line(0, 0, 0.2, startValue) + line(1, 1, 0.8, endValue);
+        lines = advancedLineMarkup(0, 0, 0.2, startValue) + advancedLineMarkup(1, 1, 0.8, endValue);
         break;
       }
       case 'piecewise':
         handles =
-          handle(0.2, number('p1'), 'P1', 'data-handle-kind="value" data-y-key="p1"') +
-          handle(0.5, number('p2'), 'P2', 'data-handle-kind="value" data-y-key="p2"') +
-          handle(0.8, number('p3'), 'P3', 'data-handle-kind="value" data-y-key="p3"');
+          advancedHandleMarkup(
+            0.2,
+            advancedValueNumber(advancedValues, 'p1'),
+            'P1',
+            'data-handle-kind="value" data-y-key="p1"',
+          ) +
+          advancedHandleMarkup(
+            0.5,
+            advancedValueNumber(advancedValues, 'p2'),
+            'P2',
+            'data-handle-kind="value" data-y-key="p2"',
+          ) +
+          advancedHandleMarkup(
+            0.8,
+            advancedValueNumber(advancedValues, 'p3'),
+            'P3',
+            'data-handle-kind="value" data-y-key="p3"',
+          );
         break;
       case 'spline':
         handles =
-          handle(0.25, number('early'), 'P1', 'data-handle-kind="value" data-y-key="early"') +
-          handle(0.65, number('late'), 'P2', 'data-handle-kind="value" data-y-key="late"');
+          advancedHandleMarkup(
+            0.25,
+            advancedValueNumber(advancedValues, 'early'),
+            'P1',
+            'data-handle-kind="value" data-y-key="early"',
+          ) +
+          advancedHandleMarkup(
+            0.65,
+            advancedValueNumber(advancedValues, 'late'),
+            'P2',
+            'data-handle-kind="value" data-y-key="late"',
+          );
         break;
     }
     advancedHandleLines.innerHTML = lines;

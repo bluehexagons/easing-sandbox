@@ -46,7 +46,7 @@ Run all local checks and create the production bundle with:
 npm run check
 ```
 
-The easing package's latest APIs are newer than its npm release, so this project pins an exact commit from its GitHub repository. The project-level `.npmrc` allows only root Git dependencies, as required by npm 12; transitive Git dependencies remain disabled.
+The easing package's latest APIs are newer than its npm release, so this project pins an archive for an exact commit from its GitHub repository.
 
 ## Deployment
 
