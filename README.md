@@ -23,12 +23,19 @@ A TypeScript browser interface for [`@bluehexagons/easing`](https://github.com/b
 
 ## Development
 
-Use Node.js 24 or newer.
+Use Node.js 24 (`.nvmrc`) and the committed npm lockfile.
 
 ```sh
-npm install
+npm ci
 npm run dev
 ```
+
+Basaltwater on Debian is the reference development environment, following the
+[shared project standards](https://github.com/bluehexagons/basaltwater/blob/main/docs/agents/project-standards.md).
+Use `nvm use` on an ordinary Node installation, or
+`basaltw node exec -- npm run check` to select the same project major on
+Basaltwater without changing the host default. No Basaltwater services are
+required to build or check the app on Linux or Windows 11.
 
 To make the development server reachable from other devices on your local
 network, use:
