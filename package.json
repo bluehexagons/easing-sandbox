@@ -18,10 +18,10 @@
     "@bluehexagons/easing": "https://codeload.github.com/bluehexagons/easing/tar.gz/bd78d32d9bbbe0064cc9fb5680705ad8811672b9"
   },
   "devDependencies": {
-    "oxfmt": "^0.70.0",
-    "oxlint": "^1.85.0",
+    "oxfmt": "^0.78.0",
+    "oxlint": "^1.93.0",
     "typescript": "^7.0.2",
-    "vite": "^8.3.1"
+    "vite": "^8.3.8"
   },
   "engines": {
     "node": ">=24.0.0"
